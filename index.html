@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spot A Market | Coming Soon</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #05070d;
+        --card: #0f1420;
+        --text: #e8edf8;
+        --muted: #9aa8c7;
+        --accent: #4f8cff;
+        --accent-2: #6f5dff;
+        --border: rgba(255, 255, 255, 0.11);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 10% 20%, rgba(79, 140, 255, 0.2), transparent 35%),
+          radial-gradient(circle at 90% 0%, rgba(111, 93, 255, 0.18), transparent 30%),
+          var(--bg);
+        display: grid;
+        place-items: center;
+        padding: 2rem 1rem;
+      }
+
+      .container {
+        width: min(680px, 100%);
+        background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
+          var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: clamp(1.5rem, 3vw, 2.75rem);
+        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.35);
+      }
+
+      .badge {
+        display: inline-block;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #c8d5ff;
+        background: rgba(79, 140, 255, 0.15);
+        border: 1px solid rgba(79, 140, 255, 0.35);
+        border-radius: 999px;
+        padding: 0.4rem 0.75rem;
+        margin-bottom: 1.2rem;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 4vw, 3rem);
+        line-height: 1.1;
+      }
+
+      .tagline {
+        margin: 0.85rem 0 1.8rem;
+        font-size: clamp(1rem, 2vw, 1.25rem);
+        color: var(--muted);
+      }
+
+      .signup {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.7rem;
+        margin-bottom: 1.2rem;
+      }
+
+      .signup input {
+        flex: 1 1 260px;
+        height: 48px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: #0a0f1a;
+        color: var(--text);
+        padding: 0 1rem;
+        font-size: 0.98rem;
+        outline: none;
+      }
+
+      .signup input:focus {
+        border-color: rgba(79, 140, 255, 0.8);
+        box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.18);
+      }
+
+      .signup button {
+        height: 48px;
+        border: none;
+        border-radius: 12px;
+        padding: 0 1.1rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        cursor: pointer;
+        color: white;
+        background: linear-gradient(120deg, var(--accent), var(--accent-2));
+      }
+
+      .signup button:hover {
+        filter: brightness(1.08);
+      }
+
+      .signup button:disabled {
+        opacity: 0.7;
+        cursor: wait;
+      }
+
+      .status {
+        margin: 0 0 1.2rem;
+        font-size: 0.9rem;
+        color: var(--muted);
+        min-height: 1.25rem;
+      }
+
+      .status.error {
+        color: #ff9aa2;
+      }
+
+      .status.success {
+        color: #8af0b2;
+      }
+
+      .hint {
+        color: var(--muted);
+        margin: 0 0 2rem;
+        font-size: 0.92rem;
+      }
+
+      .socials {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.7rem;
+      }
+
+      .socials a {
+        text-decoration: none;
+        color: #d8e2fb;
+        border: 1px solid var(--border);
+        padding: 0.55rem 0.9rem;
+        border-radius: 10px;
+        font-size: 0.9rem;
+        transition: border-color 0.2s ease, transform 0.2s ease;
+      }
+
+      .socials a:hover {
+        border-color: rgba(79, 140, 255, 0.75);
+        transform: translateY(-1px);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="container">
+      <span class="badge">Coming Soon</span>
+      <h1>Spot A Market</h1>
+      <p class="tagline">Track anything. Spot every market.</p>
+
+      <form class="signup" action="/api/waitlist" method="post" id="waitlist-form">
+        <input type="email" name="email" placeholder="Enter your email for the waitlist" required />
+        <button type="submit">Join Waitlist</button>
+      </form>
+      <p class="status" id="waitlist-status" aria-live="polite"></p>
+      <p class="hint">Be first to know when Spot A Market launches.</p>
+
+      <nav class="socials" aria-label="Social media links">
+        <a href="https://x.com" target="_blank" rel="noreferrer noopener">X</a>
+        <a href="https://linkedin.com" target="_blank" rel="noreferrer noopener">LinkedIn</a>
+        <a href="https://instagram.com" target="_blank" rel="noreferrer noopener">Instagram</a>
+        <a href="https://youtube.com" target="_blank" rel="noreferrer noopener">YouTube</a>
+      </nav>
+    </main>
+    <script>
+      const waitlistForm = document.getElementById("waitlist-form");
+      const waitlistStatus = document.getElementById("waitlist-status");
+
+      waitlistForm.addEventListener("submit", async (event) => {
+        event.preventDefault();
+
+        const submitButton = waitlistForm.querySelector("button[type='submit']");
+        const emailInput = waitlistForm.querySelector("input[name='email']");
+        const payload = { email: emailInput.value.trim() };
+
+        if (!payload.email) {
+          waitlistStatus.textContent = "Please enter a valid email address.";
+          waitlistStatus.className = "status error";
+          return;
+        }
+
+        submitButton.disabled = true;
+        waitlistStatus.textContent = "Submitting...";
+        waitlistStatus.className = "status";
+
+        try {
+          const response = await fetch(waitlistForm.action, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            throw new Error("Request failed");
+          }
+
+          waitlistForm.reset();
+          waitlistStatus.textContent = "Thanks! You are on the waitlist.";
+          waitlistStatus.className = "status success";
+        } catch (error) {
+          waitlistStatus.textContent = "Waitlist signup failed. Please try again in a moment.";
+          waitlistStatus.className = "status error";
+        } finally {
+          submitButton.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
