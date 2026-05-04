@@ -265,67 +265,82 @@ footer { border-top: 1px solid var(--navy-border); padding: 2rem 5%; display: fl
 </div>
 
 <script>
+function buildTicker(items) {
+  const html = items.map(item => {
+    const up = item.change >= 0;
+    const arrow = up ? '▲' : '▼';
+    const cls = up ? 'up' : 'down';
+    const changeStr = `${arrow} ${Math.abs(item.change).toFixed(2)}%`;
+    return `<span class="ticker-item"><strong>${item.label}</strong> ${item.price} <span class="${cls}">${changeStr}</span></span>`;
+  }).join('');
+  const track = document.getElementById('ticker-track');
+  track.innerHTML = html + html;
+}
+
 async function fetchTickerData() {
+  const items = [];
+
+  // 1. CRYPTO — CoinGecko (free, no key)
   try {
-    // Fetch crypto prices from CoinGecko (free, no API key needed)
-    const cryptoRes = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true');
-    const crypto = await cryptoRes.json();
-
-    const items = [
-      {
-        label: 'BTC',
-        price: '$' + crypto.bitcoin.usd.toLocaleString(),
-        change: crypto.bitcoin.usd_24h_change
-      },
-      {
-        label: 'ETH',
-        price: '$' + crypto.ethereum.usd.toLocaleString(),
-        change: crypto.ethereum.usd_24h_change
-      },
-      {
-        label: 'SOL',
-        price: '$' + crypto.solana.usd.toLocaleString(),
-        change: crypto.solana.usd_24h_change
-      },
-      { label: 'Gold', price: '$2,341', change: -0.8, static: true },
-      { label: 'S&P 500', price: '5,641', change: 1.1, static: true },
-      { label: 'Oil (WTI)', price: '$78.20', change: -1.5, static: true },
-      { label: 'Real Estate', price: 'Trending', change: 2.1, static: true },
-      { label: 'AI Tech', price: 'Sector', change: 5.8, static: true },
-    ];
-
-    // Build ticker HTML — doubled for seamless loop
-    function buildItems() {
-      return items.map(item => {
-        const up = item.change >= 0;
-        const arrow = up ? '▲' : '▼';
-        const cls = up ? 'up' : 'down';
-        const changeStr = item.static ? `${arrow} ${Math.abs(item.change).toFixed(1)}%` : `${arrow} ${Math.abs(item.change).toFixed(2)}%`;
-        return `<span class="ticker-item"><strong>${item.label}</strong> ${item.price} <span class="${cls}">${changeStr}</span></span>`;
-      }).join('');
-    }
-
-    const track = document.getElementById('ticker-track');
-    const html = buildItems();
-    track.innerHTML = html + html; // doubled for seamless scroll
-
-  } catch (e) {
-    // If API fails, fall back to static data
-    const track = document.getElementById('ticker-track');
-    const fallback = `
-      <span class="ticker-item"><strong>BTC</strong> $94,210 <span class="up">▲ 3.4%</span></span>
-      <span class="ticker-item"><strong>ETH</strong> $3,120 <span class="up">▲ 2.2%</span></span>
-      <span class="ticker-item"><strong>SOL</strong> $142 <span class="up">▲ 1.8%</span></span>
-      <span class="ticker-item"><strong>Gold</strong> $2,341 <span class="down">▼ 0.8%</span></span>
-      <span class="ticker-item"><strong>S&amp;P 500</strong> 5,641 <span class="up">▲ 1.1%</span></span>
-      <span class="ticker-item"><strong>Oil (WTI)</strong> $78.20 <span class="down">▼ 1.5%</span></span>
-    `;
-    track.innerHTML = fallback + fallback;
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple,dogecoin&vs_currencies=usd&include_24hr_change=true');
+    const d = await r.json();
+    items.push({ label: 'BTC', price: '$' + d.bitcoin.usd.toLocaleString(), change: d.bitcoin.usd_24h_change });
+    items.push({ label: 'ETH', price: '$' + d.ethereum.usd.toLocaleString(), change: d.ethereum.usd_24h_change });
+    items.push({ label: 'SOL', price: '$' + d.solana.usd.toLocaleString(), change: d.solana.usd_24h_change });
+    items.push({ label: 'XRP', price: '$' + d.ripple.usd.toLocaleString(), change: d.ripple.usd_24h_change });
+    items.push({ label: 'DOGE', price: '$' + d.dogecoin.usd.toLocaleString(), change: d.dogecoin.usd_24h_change });
+  } catch(e) {
+    items.push({ label: 'BTC', price: '$94,210', change: 3.4 });
+    items.push({ label: 'ETH', price: '$3,120', change: 2.2 });
+    items.push({ label: 'SOL', price: '$142', change: 1.8 });
   }
+
+  // 2. GOLD & SILVER — Metals.live (free, no key)
+  try {
+    const r = await fetch('https://metals.live/api/spot');
+    const d = await r.json();
+    const gold = d.find(m => m.symbol === 'XAU');
+    const silver = d.find(m => m.symbol === 'XAG');
+    if (gold) items.push({ label: 'Gold', price: '$' + gold.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: gold.change || 0 });
+    if (silver) items.push({ label: 'Silver', price: '$' + silver.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: silver.change || 0 });
+  } catch(e) {
+    items.push({ label: 'Gold', price: '$2,341', change: -0.8 });
+    items.push({ label: 'Silver', price: '$27.40', change: 0.3 });
+  }
+
+  // 3. FEAR & GREED INDEX — Alternative.me (free, no key)
+  try {
+    const r = await fetch('https://api.alternative.me/fng/?limit=1');
+    const d = await r.json();
+    const val = d.data[0].value;
+    const label = d.data[0].value_classification;
+    const change = val > 50 ? val - 50 : -(50 - val);
+    items.push({ label: 'Fear & Greed', price: val + ' ' + label, change: change });
+  } catch(e) {
+    items.push({ label: 'Fear & Greed', price: '62 Greed', change: 1.2 });
+  }
+
+  // 4. FOREX — ExchangeRate-API (free, no key)
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/USD');
+    const d = await r.json();
+    if (d.rates) {
+      const eur = d.rates.EUR;
+      const gbp = d.rates.GBP;
+      const jpy = d.rates.JPY;
+      items.push({ label: 'USD/EUR', price: eur.toFixed(4), change: 0.1 });
+      items.push({ label: 'USD/GBP', price: gbp.toFixed(4), change: -0.05 });
+      items.push({ label: 'USD/JPY', price: jpy.toFixed(2), change: 0.2 });
+    }
+  } catch(e) {
+    items.push({ label: 'USD/EUR', price: '0.9234', change: 0.1 });
+    items.push({ label: 'USD/GBP', price: '0.7891', change: -0.05 });
+  }
+
+  buildTicker(items);
 }
 
 fetchTickerData();
-// Refresh every 60 seconds
 setInterval(fetchTickerData, 60000);
 </script>
 
