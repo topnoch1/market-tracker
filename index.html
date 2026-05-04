@@ -1,230 +1,445 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Spot A Market | Coming Soon</title>
-    <style>
-      :root {
-        color-scheme: dark;
-        --bg: #05070d;
-        --card: #0f1420;
-        --text: #e8edf8;
-        --muted: #9aa8c7;
-        --accent: #4f8cff;
-        --accent-2: #6f5dff;
-        --border: rgba(255, 255, 255, 0.11);
-      }
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Spot A Market — Track Anything, Spot Any Market</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --navy: #060d1f;
+  --navy-mid: #0a1628;
+  --navy-card: #0d1e35;
+  --navy-border: #1a2f50;
+  --electric: #00c8ff;
+  --electric-dim: #0099cc;
+  --electric-glow: rgba(0,200,255,0.15);
+  --electric-glow-strong: rgba(0,200,255,0.3);
+  --white: #f0f6ff;
+  --muted: #7a9bbf;
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+html { scroll-behavior: smooth; }
+body {
+  background: var(--navy);
+  color: var(--white);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,200,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,200,255,0.03) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 5%;
+  background: rgba(6,13,31,0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--navy-border);
+}
+.nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.nav-logo img { height: 38px; width: 38px; object-fit: contain; }
+.nav-logo span { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; color: var(--electric); letter-spacing: 0.02em; }
+.nav-links { display: flex; align-items: center; gap: 2rem; list-style: none; }
+.nav-links a { color: var(--muted); text-decoration: none; font-size: 0.875rem; font-weight: 500; letter-spacing: 0.03em; transition: color 0.2s; }
+.nav-links a:hover { color: var(--white); }
+.nav-cta { background: var(--electric); color: var(--navy) !important; padding: 0.45rem 1.2rem; border-radius: 4px; font-weight: 700 !important; letter-spacing: 0.04em; transition: opacity 0.2s !important; }
+.nav-cta:hover { opacity: 0.85; }
+.hero {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 120px 5% 80px;
+  z-index: 1;
+}
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0,200,255,0.08);
+  border: 1px solid rgba(0,200,255,0.25);
+  color: var(--electric);
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.4rem 1rem;
+  border-radius: 2px;
+  margin-bottom: 2rem;
+  animation: fadeUp 0.8s ease both;
+}
+.hero-eyebrow::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--electric); animation: pulse 2s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+.hero h1 { font-family: var(--font-display); font-size: clamp(3rem, 7vw, 6rem); font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; margin-bottom: 1.5rem; animation: fadeUp 0.8s ease 0.1s both; }
+.hero h1 em { font-style: normal; color: var(--electric); position: relative; }
+.hero h1 em::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: var(--electric); opacity: 0.4; border-radius: 2px; }
+.hero-sub { font-size: clamp(1rem, 2vw, 1.2rem); color: var(--muted); max-width: 560px; margin: 0 auto 2.5rem; font-weight: 300; animation: fadeUp 0.8s ease 0.2s both; }
+.hero-actions { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; animation: fadeUp 0.8s ease 0.3s both; }
+.btn-primary { background: var(--electric); color: var(--navy); padding: 0.85rem 2rem; font-family: var(--font-body); font-size: 0.95rem; font-weight: 700; letter-spacing: 0.04em; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 0 24px var(--electric-glow-strong); }
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px var(--electric-glow-strong); }
+.btn-secondary { background: transparent; color: var(--white); padding: 0.85rem 2rem; font-family: var(--font-body); font-size: 0.95rem; font-weight: 500; border: 1px solid var(--navy-border); border-radius: 4px; cursor: pointer; text-decoration: none; transition: border-color 0.2s, color 0.2s; }
+.btn-secondary:hover { border-color: var(--electric); color: var(--electric); }
+.hero-visual { margin-top: 5rem; width: 100%; max-width: 760px; position: relative; animation: fadeUp 0.8s ease 0.4s both; }
+.hero-screen { background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 12px; overflow: hidden; }
+.screen-bar { background: var(--navy-mid); padding: 0.75rem 1rem; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--navy-border); }
+.screen-dot { width: 10px; height: 10px; border-radius: 50%; }
+.screen-dot:nth-child(1) { background: #ff5f57; }
+.screen-dot:nth-child(2) { background: #ffbd2e; }
+.screen-dot:nth-child(3) { background: #28c840; }
+.screen-title { margin-left: auto; margin-right: auto; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.05em; }
+.screen-body { padding: 1.5rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+.ticker-card { background: var(--navy-mid); border: 1px solid var(--navy-border); border-radius: 8px; padding: 1rem; text-align: left; }
+.ticker-label { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
+.ticker-value { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; color: var(--white); }
+.ticker-change { font-size: 0.75rem; font-weight: 500; margin-top: 0.25rem; }
+.up { color: #00e676; }
+.down { color: #ff5252; }
+.screen-chart { grid-column: 1 / -1; background: var(--navy-mid); border: 1px solid var(--navy-border); border-radius: 8px; padding: 1rem; height: 120px; display: flex; align-items: flex-end; gap: 4px; overflow: hidden; }
+.bar { flex: 1; border-radius: 3px 3px 0 0; background: linear-gradient(to top, var(--electric-dim), var(--electric)); opacity: 0.7; animation: barGrow 1s ease both; }
+@keyframes barGrow { from { height: 0 !important; } }
+section { position: relative; z-index: 1; padding: 6rem 5%; }
+.section-label { font-size: 0.7rem; letter-spacing: 0.15em; text-transform: uppercase; color: var(--electric); font-weight: 500; margin-bottom: 1rem; }
+.section-heading { font-family: var(--font-display); font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; margin-bottom: 1rem; }
+.section-sub { color: var(--muted); max-width: 520px; font-weight: 300; }
+.markets-strip { position: relative; z-index: 1; overflow: hidden; border-top: 1px solid var(--navy-border); border-bottom: 1px solid var(--navy-border); padding: 1rem 0; background: var(--navy-mid); }
+.ticker-track { display: flex; gap: 3rem; white-space: nowrap; animation: ticker 25s linear infinite; }
+.ticker-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--muted); flex-shrink: 0; }
+.ticker-item strong { color: var(--white); font-weight: 500; }
+@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-top: 4rem; }
+.feature-card { background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 10px; padding: 2rem; transition: border-color 0.3s, transform 0.3s; position: relative; overflow: hidden; }
+.feature-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--electric); opacity: 0; transition: opacity 0.3s; }
+.feature-card:hover { border-color: rgba(0,200,255,0.35); transform: translateY(-4px); }
+.feature-card:hover::before { opacity: 1; }
+.feature-icon { width: 44px; height: 44px; background: var(--electric-glow); border: 1px solid rgba(0,200,255,0.2); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 1.25rem; font-size: 1.2rem; }
+.feature-title { font-family: var(--font-display); font-size: 1.05rem; font-weight: 700; margin-bottom: 0.5rem; }
+.feature-desc { color: var(--muted); font-size: 0.9rem; line-height: 1.6; font-weight: 300; }
+.how-section { background: var(--navy-mid); border-top: 1px solid var(--navy-border); border-bottom: 1px solid var(--navy-border); }
+.how-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; margin-top: 4rem; }
+.step { position: relative; padding-left: 1rem; }
+.step-num { font-family: var(--font-display); font-size: 3.5rem; font-weight: 800; color: rgba(0,200,255,0.12); line-height: 1; margin-bottom: 0.5rem; letter-spacing: -0.04em; }
+.step-title { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; margin-bottom: 0.4rem; }
+.step-desc { color: var(--muted); font-size: 0.875rem; font-weight: 300; line-height: 1.65; }
+.markets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; margin-top: 4rem; }
+.market-pill { background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 6px; padding: 0.9rem 1.2rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.875rem; font-weight: 500; transition: border-color 0.2s, background 0.2s; cursor: default; }
+.market-pill:hover { border-color: rgba(0,200,255,0.3); background: rgba(0,200,255,0.04); color: var(--electric); }
+.market-icon { font-size: 1rem; }
+.pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-top: 4rem; max-width: 900px; margin-left: auto; margin-right: auto; }
+.price-card { background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 12px; padding: 2.5rem 2rem; position: relative; }
+.price-card.featured { border-color: var(--electric); background: linear-gradient(135deg, #0d1e35 0%, #0a1f3a 100%); }
+.price-badge { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--electric); color: var(--navy); font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; padding: 0.25rem 0.9rem; border-radius: 2px; white-space: nowrap; }
+.price-tier { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.75rem; }
+.price-amount { font-family: var(--font-display); font-size: 3rem; font-weight: 800; line-height: 1; margin-bottom: 0.25rem; }
+.price-amount span { font-size: 1rem; font-weight: 400; color: var(--muted); }
+.price-note { font-size: 0.8rem; color: var(--muted); margin-bottom: 2rem; font-style: italic; }
+.price-features { list-style: none; margin-bottom: 2rem; }
+.price-features li { font-size: 0.875rem; color: var(--muted); padding: 0.4rem 0; display: flex; align-items: center; gap: 0.6rem; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.price-features li::before { content: '✓'; color: var(--electric); font-weight: 700; flex-shrink: 0; }
+.waitlist-section { text-align: center; padding: 8rem 5%; }
+.waitlist-box { background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 16px; padding: 4rem 3rem; max-width: 560px; margin: 0 auto; position: relative; overflow: hidden; }
+.waitlist-box::before { content: ''; position: absolute; top: -80px; left: 50%; transform: translateX(-50%); width: 300px; height: 300px; background: radial-gradient(circle, rgba(0,200,255,0.1) 0%, transparent 70%); pointer-events: none; }
+.waitlist-box h2 { font-family: var(--font-display); font-size: 2rem; font-weight: 800; margin-bottom: 0.75rem; }
+.waitlist-box p { color: var(--muted); font-size: 0.95rem; margin-bottom: 2rem; font-weight: 300; }
+.waitlist-form { display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center; }
+.waitlist-input { flex: 1; min-width: 220px; background: var(--navy-mid); border: 1px solid var(--navy-border); border-radius: 4px; padding: 0.8rem 1.1rem; color: var(--white); font-family: var(--font-body); font-size: 0.95rem; outline: none; transition: border-color 0.2s; }
+.waitlist-input::placeholder { color: var(--muted); }
+.waitlist-input:focus { border-color: var(--electric); }
+footer { border-top: 1px solid var(--navy-border); padding: 2rem 5%; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; position: relative; z-index: 1; }
+.footer-logo { display: flex; align-items: center; gap: 8px; text-decoration: none; }
+.footer-logo img { height: 28px; width: 28px; object-fit: contain; }
+.footer-logo span { font-family: var(--font-display); font-size: 0.95rem; font-weight: 700; color: var(--electric); }
+.footer-copy { font-size: 0.8rem; color: var(--muted); }
+.footer-links { display: flex; gap: 1.5rem; list-style: none; }
+.footer-links a { font-size: 0.8rem; color: var(--muted); text-decoration: none; transition: color 0.2s; }
+.footer-links a:hover { color: var(--electric); }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 640px) {
+  .nav-links { display: none; }
+  .screen-body { grid-template-columns: 1fr 1fr; }
+  .waitlist-box { padding: 2.5rem 1.5rem; }
+}
+</style>
+</head>
+<body>
 
-      * {
-        box-sizing: border-box;
-      }
+<!-- NAV -->
+<nav>
+  <a class="nav-logo" href="#">
+    <img src="Spot_A_Market_Logo.png" alt="Spot A Market logo" />
+    <span>Spot A Market</span>
+  </a>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#markets">Markets</a></li>
+    <li><a href="#how">How It Works</a></li>
+    <li><a href="#pricing">Pricing</a></li>
+    <li><a href="#waitlist" class="nav-cta">Join Waitlist</a></li>
+  </ul>
+</nav>
 
-      body {
-        margin: 0;
-        min-height: 100vh;
-        font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
-        color: var(--text);
-        background:
-          radial-gradient(circle at 10% 20%, rgba(79, 140, 255, 0.2), transparent 35%),
-          radial-gradient(circle at 90% 0%, rgba(111, 93, 255, 0.18), transparent 30%),
-          var(--bg);
-        display: grid;
-        place-items: center;
-        padding: 2rem 1rem;
-      }
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Now accepting early access</div>
+  <h1>Track Anything.<br /><em>Spot Any Market.</em></h1>
+  <p class="hero-sub">Real-time intelligence on every market imaginable — from crypto and commodities to niche industries you didn't know existed.</p>
+  <div class="hero-actions">
+    <a href="#waitlist" class="btn-primary">Get Early Access</a>
+    <a href="#features" class="btn-secondary">See How It Works</a>
+  </div>
+  <div class="hero-visual">
+    <div class="hero-screen">
+      <div class="screen-bar">
+        <div class="screen-dot"></div>
+        <div class="screen-dot"></div>
+        <div class="screen-dot"></div>
+        <span class="screen-title">spotamarket.io — Dashboard</span>
+      </div>
+      <div class="screen-body">
+        <div class="ticker-card">
+          <div class="ticker-label">Crypto</div>
+          <div class="ticker-value">$94,210</div>
+          <div class="ticker-change up">▲ 3.4%</div>
+        </div>
+        <div class="ticker-card">
+          <div class="ticker-label">Real Estate</div>
+          <div class="ticker-value">↑ Hot</div>
+          <div class="ticker-change up">▲ Demand</div>
+        </div>
+        <div class="ticker-card">
+          <div class="ticker-label">Commodities</div>
+          <div class="ticker-value">$2,341</div>
+          <div class="ticker-change down">▼ 1.2%</div>
+        </div>
+        <div class="screen-chart">
+          <div class="bar" style="height:35%"></div>
+          <div class="bar" style="height:52%"></div>
+          <div class="bar" style="height:44%"></div>
+          <div class="bar" style="height:68%"></div>
+          <div class="bar" style="height:57%"></div>
+          <div class="bar" style="height:72%"></div>
+          <div class="bar" style="height:63%"></div>
+          <div class="bar" style="height:88%"></div>
+          <div class="bar" style="height:75%"></div>
+          <div class="bar" style="height:91%"></div>
+          <div class="bar" style="height:80%"></div>
+          <div class="bar" style="height:95%"></div>
+          <div class="bar" style="height:85%"></div>
+          <div class="bar" style="height:100%"></div>
+          <div class="bar" style="height:90%"></div>
+          <div class="bar" style="height:78%"></div>
+          <div class="bar" style="height:87%"></div>
+          <div class="bar" style="height:93%"></div>
+          <div class="bar" style="height:82%"></div>
+          <div class="bar" style="height:97%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
 
-      .container {
-        width: min(680px, 100%);
-        background: linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(255, 255, 255, 0)),
-          var(--card);
-        border: 1px solid var(--border);
-        border-radius: 20px;
-        padding: clamp(1.5rem, 3vw, 2.75rem);
-        box-shadow: 0 15px 50px rgba(0, 0, 0, 0.35);
-      }
+<!-- MARKETS STRIP -->
+<div class="markets-strip">
+  <div class="ticker-track">
+    <span class="ticker-item"><strong>BTC</strong> $94,210 <span class="up">▲ 3.4%</span></span>
+    <span class="ticker-item"><strong>Gold</strong> $2,341 <span class="down">▼ 0.8%</span></span>
+    <span class="ticker-item"><strong>S&amp;P 500</strong> 5,641 <span class="up">▲ 1.1%</span></span>
+    <span class="ticker-item"><strong>Oil (WTI)</strong> $78.20 <span class="down">▼ 1.5%</span></span>
+    <span class="ticker-item"><strong>ETH</strong> $3,120 <span class="up">▲ 2.2%</span></span>
+    <span class="ticker-item"><strong>Real Estate</strong> Trending <span class="up">▲ Hot</span></span>
+    <span class="ticker-item"><strong>Retail</strong> Consumer <span class="up">▲ Strong</span></span>
+    <span class="ticker-item"><strong>AI Tech</strong> Sector <span class="up">▲ 5.8%</span></span>
+    <span class="ticker-item"><strong>BTC</strong> $94,210 <span class="up">▲ 3.4%</span></span>
+    <span class="ticker-item"><strong>Gold</strong> $2,341 <span class="down">▼ 0.8%</span></span>
+    <span class="ticker-item"><strong>S&amp;P 500</strong> 5,641 <span class="up">▲ 1.1%</span></span>
+    <span class="ticker-item"><strong>Oil (WTI)</strong> $78.20 <span class="down">▼ 1.5%</span></span>
+    <span class="ticker-item"><strong>ETH</strong> $3,120 <span class="up">▲ 2.2%</span></span>
+    <span class="ticker-item"><strong>Real Estate</strong> Trending <span class="up">▲ Hot</span></span>
+    <span class="ticker-item"><strong>Retail</strong> Consumer <span class="up">▲ Strong</span></span>
+    <span class="ticker-item"><strong>AI Tech</strong> Sector <span class="up">▲ 5.8%</span></span>
+  </div>
+</div>
 
-      .badge {
-        display: inline-block;
-        font-size: 0.75rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        color: #c8d5ff;
-        background: rgba(79, 140, 255, 0.15);
-        border: 1px solid rgba(79, 140, 255, 0.35);
-        border-radius: 999px;
-        padding: 0.4rem 0.75rem;
-        margin-bottom: 1.2rem;
-      }
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-label">Features</div>
+  <h2 class="section-heading">Everything you need to<br />stay ahead of any market</h2>
+  <p class="section-sub">Whether you're an investor, entrepreneur, researcher, or just curious — Spot A Market gives you the clarity to act.</p>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🎯</div>
+      <div class="feature-title">Any Market, Anywhere</div>
+      <p class="feature-desc">From global stock exchanges to hyper-local real estate markets and emerging niches — if it exists, you can track it.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <div class="feature-title">Real-Time Intelligence</div>
+      <p class="feature-desc">Live data feeds and trend signals that update continuously, so you're always working with the freshest information.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <div class="feature-title">Deep Market Analysis</div>
+      <p class="feature-desc">More than prices — understand the forces behind movement. Sentiment, volume, macro context, and competitive dynamics.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔔</div>
+      <div class="feature-title">Smart Alerts</div>
+      <p class="feature-desc">Set custom conditions and get notified the moment a market hits your trigger — no constant monitoring required.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🗺️</div>
+      <div class="feature-title">Market Discovery</div>
+      <p class="feature-desc">Explore emerging sectors and trending opportunities before they hit mainstream awareness. Spot markets before others do.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🧠</div>
+      <div class="feature-title">AI-Powered Insights</div>
+      <p class="feature-desc">Intelligent summaries and pattern recognition that translate raw data into actionable understanding — fast.</p>
+    </div>
+  </div>
+</section>
 
-      .brand-logo {
-        display: block;
-        width: 120px;
-        height: auto;
-        margin: 0 auto 1rem;
-      }
+<!-- HOW IT WORKS -->
+<section id="how" class="how-section">
+  <div class="section-label">How It Works</div>
+  <h2 class="section-heading">Three steps to<br />market clarity</h2>
+  <div class="how-steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-title">Choose Your Markets</div>
+      <p class="step-desc">Search any market — crypto, commodities, real estate, niche industries, and more. Add them to your personalized dashboard.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-title">Get Deep Intelligence</div>
+      <p class="step-desc">Real-time data, trend analysis, sentiment signals, and AI-generated insights surface what actually matters in each market.</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-title">Act with Confidence</div>
+      <p class="step-desc">Set alerts, compare markets, and make informed decisions backed by data — not noise. Spot the opportunity before anyone else.</p>
+    </div>
+  </div>
+</section>
 
-      h1 {
-        margin: 0;
-        font-size: clamp(2rem, 4vw, 3rem);
-        line-height: 1.1;
-      }
+<!-- MARKETS -->
+<section id="markets">
+  <div class="section-label">Coverage</div>
+  <h2 class="section-heading">Every market you can<br />imagine — and then some</h2>
+  <p class="section-sub">Spot A Market covers an expansive and growing list of sectors, asset classes, and niche opportunities.</p>
+  <div class="markets-grid">
+    <div class="market-pill"><span class="market-icon">₿</span> Cryptocurrency</div>
+    <div class="market-pill"><span class="market-icon">📈</span> Stocks &amp; Equities</div>
+    <div class="market-pill"><span class="market-icon">🏠</span> Real Estate</div>
+    <div class="market-pill"><span class="market-icon">🌾</span> Commodities</div>
+    <div class="market-pill"><span class="market-icon">🛢️</span> Energy</div>
+    <div class="market-pill"><span class="market-icon">💱</span> Forex</div>
+    <div class="market-pill"><span class="market-icon">🤖</span> AI &amp; Tech</div>
+    <div class="market-pill"><span class="market-icon">🏭</span> Manufacturing</div>
+    <div class="market-pill"><span class="market-icon">🛒</span> Retail &amp; Consumer</div>
+    <div class="market-pill"><span class="market-icon">💊</span> Healthcare</div>
+    <div class="market-pill"><span class="market-icon">🎮</span> Gaming</div>
+    <div class="market-pill"><span class="market-icon">🌱</span> Agriculture</div>
+    <div class="market-pill"><span class="market-icon">✈️</span> Travel &amp; Hospitality</div>
+    <div class="market-pill"><span class="market-icon">🎵</span> Entertainment</div>
+    <div class="market-pill"><span class="market-icon">🔬</span> Biotech</div>
+    <div class="market-pill"><span class="market-icon">+</span> And many more…</div>
+  </div>
+</section>
 
-      .tagline {
-        margin: 0.85rem 0 1.8rem;
-        font-size: clamp(1rem, 2vw, 1.25rem);
-        color: var(--muted);
-      }
+<!-- PRICING -->
+<section id="pricing">
+  <div style="text-align:center;">
+    <div class="section-label">Pricing</div>
+    <h2 class="section-heading">Simple, transparent pricing</h2>
+    <p class="section-sub" style="margin: 0 auto;">Plans coming soon. Join the waitlist and lock in early access pricing.</p>
+  </div>
+  <div class="pricing-grid">
+    <div class="price-card">
+      <div class="price-tier">Free</div>
+      <div class="price-amount">$0 <span>/ mo</span></div>
+      <p class="price-note">Free forever. No credit card.</p>
+      <ul class="price-features">
+        <li>Track up to 5 markets</li>
+        <li>Daily market summaries</li>
+        <li>Basic trend signals</li>
+        <li>Community access</li>
+      </ul>
+      <a href="#waitlist" class="btn-secondary" style="display:block;text-align:center;">Join Waitlist</a>
+    </div>
+    <div class="price-card featured">
+      <div class="price-badge">Most Popular</div>
+      <div class="price-tier">Pro</div>
+      <div class="price-amount">TBD <span>/ mo</span></div>
+      <p class="price-note">Early access pricing locked in for waitlist.</p>
+      <ul class="price-features">
+        <li>Unlimited market tracking</li>
+        <li>Real-time data &amp; alerts</li>
+        <li>AI-powered insights</li>
+        <li>Advanced analytics</li>
+        <li>Priority support</li>
+      </ul>
+      <a href="#waitlist" class="btn-primary" style="display:block;text-align:center;">Get Early Access</a>
+    </div>
+    <div class="price-card">
+      <div class="price-tier">Enterprise</div>
+      <div class="price-amount">Custom</div>
+      <p class="price-note">For teams and institutions.</p>
+      <ul class="price-features">
+        <li>Everything in Pro</li>
+        <li>API access</li>
+        <li>Custom integrations</li>
+        <li>Dedicated support</li>
+      </ul>
+      <a href="#waitlist" class="btn-secondary" style="display:block;text-align:center;">Contact Us</a>
+    </div>
+  </div>
+</section>
 
-      .signup {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.7rem;
-        margin-bottom: 1.2rem;
-      }
+<!-- WAITLIST -->
+<section id="waitlist" class="waitlist-section">
+  <div class="waitlist-box">
+    <h2>Be First to Spot It.</h2>
+    <p>Join the waitlist and get early access before we open to the public. No spam — just your invite.</p>
+    <div class="waitlist-form">
+      <input class="waitlist-input" type="email" placeholder="Enter your email address" />
+      <a href="#" class="btn-primary">Join Waitlist</a>
+    </div>
+  </div>
+</section>
 
-      .signup input {
-        flex: 1 1 260px;
-        height: 48px;
-        border-radius: 12px;
-        border: 1px solid var(--border);
-        background: #0a0f1a;
-        color: var(--text);
-        padding: 0 1rem;
-        font-size: 0.98rem;
-        outline: none;
-      }
+<!-- FOOTER -->
+<footer>
+  <a class="footer-logo" href="#">
+    <img src="Spot_A_Market_Logo.png" alt="Spot A Market" />
+    <span>Spot A Market</span>
+  </a>
+  <ul class="footer-links">
+    <li><a href="#">Privacy</a></li>
+    <li><a href="#">Terms</a></li>
+    <li><a href="#">Contact</a></li>
+  </ul>
+  <p class="footer-copy">© 2025 Spot A Market. All rights reserved.</p>
+</footer>
 
-      .signup input:focus {
-        border-color: rgba(79, 140, 255, 0.8);
-        box-shadow: 0 0 0 4px rgba(79, 140, 255, 0.18);
-      }
-
-      .signup button {
-        height: 48px;
-        border: none;
-        border-radius: 12px;
-        padding: 0 1.1rem;
-        font-size: 0.95rem;
-        font-weight: 600;
-        cursor: pointer;
-        color: white;
-        background: linear-gradient(120deg, var(--accent), var(--accent-2));
-      }
-
-      .signup button:hover {
-        filter: brightness(1.08);
-      }
-
-      .signup button:disabled {
-        opacity: 0.7;
-        cursor: wait;
-      }
-
-      .status {
-        margin: 0 0 1.2rem;
-        font-size: 0.9rem;
-        color: var(--muted);
-        min-height: 1.25rem;
-      }
-
-      .status.error {
-        color: #ff9aa2;
-      }
-
-      .status.success {
-        color: #8af0b2;
-      }
-
-      .hint {
-        color: var(--muted);
-        margin: 0 0 2rem;
-        font-size: 0.92rem;
-      }
-
-      .socials {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.7rem;
-      }
-
-      .socials a {
-        text-decoration: none;
-        color: #d8e2fb;
-        border: 1px solid var(--border);
-        padding: 0.55rem 0.9rem;
-        border-radius: 10px;
-        font-size: 0.9rem;
-        transition: border-color 0.2s ease, transform 0.2s ease;
-      }
-
-      .socials a:hover {
-        border-color: rgba(79, 140, 255, 0.75);
-        transform: translateY(-1px);
-      }
-    </style>
-  </head>
-  <body>
-    <main class="container">
-      <span class="badge">Coming Soon</span>
-      <img class="brand-logo" src="Spot A Market Logo.png" alt="Spot A Market logo" />
-      <h1>Spot A Market</h1>
-      <p class="tagline">Track anything. Spot every market.</p>
-
-      <form class="signup" action="/api/waitlist" method="post" id="waitlist-form">
-        <input type="email" name="email" placeholder="Enter your email for the waitlist" required />
-        <button type="submit">Join Waitlist</button>
-      </form>
-      <p class="status" id="waitlist-status" aria-live="polite"></p>
-      <p class="hint">Be first to know when Spot A Market launches.</p>
-
-      <nav class="socials" aria-label="Social media links">
-        <a href="https://x.com/spotamarket" target="_blank" rel="noreferrer noopener">X</a>
-        <a href="https://instagram.com/spotamarket" target="_blank" rel="noreferrer noopener">Instagram</a>
-      </nav>
-    </main>
-    <script>
-      const waitlistForm = document.getElementById("waitlist-form");
-      const waitlistStatus = document.getElementById("waitlist-status");
-
-      waitlistForm.addEventListener("submit", async (event) => {
-        event.preventDefault();
-
-        const submitButton = waitlistForm.querySelector("button[type='submit']");
-        const emailInput = waitlistForm.querySelector("input[name='email']");
-        const payload = { email: emailInput.value.trim() };
-
-        if (!payload.email) {
-          waitlistStatus.textContent = "Please enter a valid email address.";
-          waitlistStatus.className = "status error";
-          return;
-        }
-
-        submitButton.disabled = true;
-        waitlistStatus.textContent = "Submitting...";
-        waitlistStatus.className = "status";
-
-        try {
-          const response = await fetch(waitlistForm.action, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-
-          if (!response.ok) {
-            throw new Error("Request failed");
-          }
-
-          waitlistForm.reset();
-          waitlistStatus.textContent = "Thanks! You are on the waitlist.";
-          waitlistStatus.className = "status success";
-        } catch (error) {
-          waitlistStatus.textContent = "Waitlist signup failed. Please try again in a moment.";
-          waitlistStatus.className = "status error";
-        } finally {
-          submitButton.disabled = false;
-        }
-      });
-    </script>
-  </body>
+</body>
 </html>
