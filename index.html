@@ -295,14 +295,19 @@ async function fetchTickerData() {
     items.push({ label: 'SOL', price: '$142', change: 1.8 });
   }
 
-  // 2. GOLD & SILVER — Metals.live (free, no key)
+  // 2. GOLD & SILVER — GoldAPI.io (free)
   try {
-    const r = await fetch('https://metals.live/api/spot');
-    const d = await r.json();
-    const gold = d.find(m => m.symbol === 'XAU');
-    const silver = d.find(m => m.symbol === 'XAG');
-    if (gold) items.push({ label: 'Gold', price: '$' + gold.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: gold.change || 0 });
-    if (silver) items.push({ label: 'Silver', price: '$' + silver.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: silver.change || 0 });
+    const goldRes = await fetch('https://www.goldapi.io/api/XAU/USD', {
+      headers: { 'x-access-token': 'goldapi-d4c25dac5cacdfe4fb57cfe4b9ce77b9-io' }
+    });
+    const goldData = await goldRes.json();
+    items.push({ label: 'Gold', price: '$' + goldData.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: goldData.ch || 0 });
+
+    const silverRes = await fetch('https://www.goldapi.io/api/XAG/USD', {
+      headers: { 'x-access-token': 'goldapi-d4c25dac5cacdfe4fb57cfe4b9ce77b9-io' }
+    });
+    const silverData = await silverRes.json();
+    items.push({ label: 'Silver', price: '$' + silverData.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: silverData.ch || 0 });
   } catch(e) {
     items.push({ label: 'Gold', price: '$2,341', change: -0.8 });
     items.push({ label: 'Silver', price: '$27.40', change: 0.3 });
@@ -315,9 +320,9 @@ async function fetchTickerData() {
     const val = d.data[0].value;
     const label = d.data[0].value_classification;
     const change = val > 50 ? val - 50 : -(50 - val);
-    items.push({ label: 'Fear & Greed', price: val + ' ' + label, change: change });
+    items.push({ label: 'Crypto Fear & Greed', price: val + ' ' + label, change: change });
   } catch(e) {
-    items.push({ label: 'Fear & Greed', price: '62 Greed', change: 1.2 });
+    items.push({ label: 'Crypto Fear & Greed', price: '62 Greed', change: 1.2 });
   }
 
   // 4. FOREX — ExchangeRate-API (free, no key)
