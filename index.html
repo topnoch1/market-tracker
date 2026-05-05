@@ -108,6 +108,9 @@ nav {
 .screen-dot:nth-child(3) { background: #28c840; }
 .screen-title { margin-left: auto; margin-right: auto; font-size: 0.75rem; color: var(--muted); letter-spacing: 0.05em; }
 .screen-body { padding: 1.5rem; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+@media (max-width: 640px) {
+  .screen-body { grid-template-columns: 1fr 1fr; }
+}
 .ticker-card { background: var(--navy-mid); border: 1px solid var(--navy-border); border-radius: 8px; padding: 1rem; text-align: left; }
 .ticker-label { font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem; }
 .ticker-value { font-family: var(--font-display); font-size: 1.4rem; font-weight: 700; color: var(--white); }
@@ -175,8 +178,12 @@ footer { border-top: 1px solid var(--navy-border); padding: 2rem 5%; display: fl
 @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
 @media (max-width: 640px) {
   .nav-links { display: none; }
-  .screen-body { grid-template-columns: 1fr 1fr; }
+  .screen-body { grid-template-columns: 1fr 1fr !important; }
+  .screen-chart { display: none; }
   .waitlist-box { padding: 2.5rem 1.5rem; }
+  .hero-visual { margin-top: 2.5rem; }
+  .ticker-value { font-size: 1rem; }
+  .ticker-label { font-size: 0.6rem; }
 }
 </style>
 </head>
