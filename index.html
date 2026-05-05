@@ -338,8 +338,8 @@ async function fetchTickerData(firstLoad) {
 
   const [cryptoResult, goldResult, silverResult, forexResult, ...stockResults] = await Promise.allSettled([
     fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true').then(r => r.json()),
-    fetch('https://gold-api.com/price/XAU', { headers: { 'x-access-token': '0171b0aec54a923fe37bfab6eaa390e6da231ae8002fba0fe39ea6c74de0352c' } }).then(r => r.json()),
-    fetch('https://gold-api.com/price/XAG', { headers: { 'x-access-token': '0171b0aec54a923fe37bfab6eaa390e6da231ae8002fba0fe39ea6c74de0352c' } }).then(r => r.json()),
+    fetch('https://api.gold-api.com/price/XAU').then(r => r.json()),
+    fetch('https://api.gold-api.com/price/XAG').then(r => r.json()),
     fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json()),
     ...stocks.map(s => fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${FINNHUB_KEY}`).then(r => r.json()))
   ]);
@@ -439,7 +439,7 @@ async function fetchHeroCards() {
 
   // Gold
   try {
-    const r = await fetch('https://gold-api.com/price/XAU', { headers: { 'x-access-token': '0171b0aec54a923fe37bfab6eaa390e6da231ae8002fba0fe39ea6c74de0352c' } });
+    const r = await fetch('https://api.gold-api.com/price/XAU');
     const d = await r.json();
     if (d.price) {
       setCard('card-gold', '$' + d.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), d.chp || 0);
