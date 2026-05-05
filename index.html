@@ -267,6 +267,10 @@ footer { border-top: 1px solid var(--navy-border); padding: 2rem 5%; display: fl
 </div>
 
 <script>
+const FINNHUB_KEY = 'd7sm6qpr01qorsvj8a1gd7sm6qpr01qorsvj8a20';
+const LOOP_DURATION = 20000; // 20 seconds per loop
+let refreshTimer = null;
+
 function buildTicker(items) {
   const html = items.map(item => {
     const up = item.change >= 0;
@@ -282,19 +286,29 @@ function buildTicker(items) {
 async function fetchTickerData() {
   const items = [];
 
-  // Fetch all data in parallel so ticker only builds once
+  const stocks = [
+    { symbol: 'SPY', label: 'S&P 500 (SPY)' },
+    { symbol: 'QQQ', label: 'Nasdaq (QQQ)' },
+    { symbol: 'MSFT', label: 'Microsoft' },
+    { symbol: 'NVDA', label: 'NVDA' },
+    { symbol: 'AMD', label: 'AMD' },
+    { symbol: 'TSLA', label: 'Tesla' },
+    { symbol: 'META', label: 'Meta' },
+    { symbol: 'GOOGL', label: 'Google' },
+  ];
+
   const [cryptoResult, goldResult, silverResult, forexResult, ...stockResults] = await Promise.allSettled([
-    // 1. CRYPTO
+    // CRYPTO
     fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true').then(r => r.json()),
-    // 2. GOLD
+    // GOLD
     fetch('https://www.goldapi.io/api/XAU/USD', { headers: { 'x-access-token': 'goldapi-d4c25dac5cacdfe4fb57cfe4b9ce77b9-io' } }).then(r => r.json()),
-    // 3. SILVER
+    // SILVER
     fetch('https://www.goldapi.io/api/XAG/USD', { headers: { 'x-access-token': 'goldapi-d4c25dac5cacdfe4fb57cfe4b9ce77b9-io' } }).then(r => r.json()),
-    // 4. FOREX
+    // FOREX
     fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json()),
-    // 5. STOCKS — all in parallel
-    ...['SPY','QQQ','NVDA'].map(sym =>
-      fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${sym}&apikey=B5G843I7BHE1670A`).then(r => r.json())
+    // STOCKS via Finnhub
+    ...stocks.map(s =>
+      fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${FINNHUB_KEY}`).then(r => r.json())
     )
   ]);
 
@@ -327,27 +341,21 @@ async function fetchTickerData() {
     items.push({ label: 'Silver', price: '$27.40', change: 0.3 });
   }
 
-  // STOCKS
-  const stockSymbols = [
-    { symbol: 'SPY', label: 'S&P 500 (SPY)' },
-    { symbol: 'QQQ', label: 'Nasdaq (QQQ)' },
-    { symbol: 'NVDA', label: 'NVDA' },
-  ];
+  // STOCKS via Finnhub
   stockResults.forEach((result, i) => {
-    if (result.status === 'fulfilled') {
-      const q = result.value['Global Quote'];
-      if (q && q['05. price']) {
-        const price = parseFloat(q['05. price']);
-        const open = parseFloat(q['02. open']);
-        const change = parseFloat(q['10. change percent'].replace('%', ''));
-        items.push({
-          label: stockSymbols[i].label,
-          price: `$${price.toFixed(2)} (Open: $${open.toFixed(2)})`,
-          change: change
-        });
-      }
+    if (result.status === 'fulfilled' && result.value.c) {
+      const q = result.value;
+      const price = q.c; // current price
+      const open = q.o;  // open price
+      const change = ((q.c - q.pc) / q.pc) * 100; // % change from prev close
+      items.push({
+        label: stocks[i].label,
+        price: `$${price.toFixed(2)} (Open: $${open.toFixed(2)})`,
+        change: change
+      });
     }
   });
+
   // FOREX
   if (forexResult.status === 'fulfilled' && forexResult.value.rates) {
     const d = forexResult.value;
@@ -362,9 +370,19 @@ async function fetchTickerData() {
   buildTicker(items);
 }
 
-fetchTickerData();
-// Refresh every 5 hours (to stay within Alpha Vantage free tier limits)
-setInterval(fetchTickerData, 5 * 60 * 60 * 1000);
+// On load: fetch data, then wait 2 full loops before refreshing
+fetchTickerData().then(() => {
+  scheduleNextRefresh();
+});
+
+function scheduleNextRefresh() {
+  // Wait for 2 full loops (2 x 20s = 40s) then refresh
+  refreshTimer = setTimeout(() => {
+    fetchTickerData().then(() => {
+      scheduleNextRefresh();
+    });
+  }, LOOP_DURATION * 2);
+}
 </script>
 
 <script>
