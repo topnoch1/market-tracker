@@ -358,16 +358,28 @@ async function fetchTickerData(firstLoad) {
     items.push({ label: 'SOL', price: '$142', change: 1.8 });
   }
 
-  if (goldResult.status === 'fulfilled' && goldResult.value.price) {
+  if (goldResult.status === 'fulfilled') {
     const d = goldResult.value;
-    items.push({ label: 'Gold', price: '$' + d.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: d.chp || 0 });
+    const p = d.price || d.Price || d.rate || d.ask;
+    const chp = d.chp || d.change_pct || 0;
+    if (p) {
+      items.push({ label: 'Gold', price: '$' + parseFloat(p).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: chp });
+    } else {
+      items.push({ label: 'Gold', price: '$4,542', change: -0.8 });
+    }
   } else {
     items.push({ label: 'Gold', price: '$4,542', change: -0.8 });
   }
 
-  if (silverResult.status === 'fulfilled' && silverResult.value.price) {
+  if (silverResult.status === 'fulfilled') {
     const d = silverResult.value;
-    items.push({ label: 'Silver', price: '$' + d.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: d.chp || 0 });
+    const p = d.price || d.Price || d.rate || d.ask;
+    const chp = d.chp || d.change_pct || 0;
+    if (p) {
+      items.push({ label: 'Silver', price: '$' + parseFloat(p).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: chp });
+    } else {
+      items.push({ label: 'Silver', price: '$74.66', change: -1.4 });
+    }
   } else {
     items.push({ label: 'Silver', price: '$74.66', change: -1.4 });
   }
@@ -441,8 +453,9 @@ async function fetchHeroCards() {
   try {
     const r = await fetch('https://api.gold-api.com/price/XAU');
     const d = await r.json();
-    if (d.price) {
-      setCard('card-gold', '$' + d.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), d.chp || 0);
+    const p = d.price || d.Price || d.rate || d.ask;
+    if (p) {
+      setCard('card-gold', '$' + parseFloat(p).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), d.chp || d.change_pct || 0);
     } else { setCard('card-gold', '$4,542', -0.8); }
   } catch(e) { setCard('card-gold', '$4,542', -0.8); }
 
