@@ -520,100 +520,240 @@ async function fetchHeroCards() {
 fetchHeroCards();
 setInterval(fetchHeroCards, 5 * 60 * 60 * 1000);
 
-// ── CRYPTO PANEL ──
-function toggleCryptoPanel() {
-  const panel = document.getElementById('crypto-panel');
-  const pill = document.getElementById('pill-crypto');
+// ── MARKET PANELS ──
+const livePanels = ['crypto', 'stocks', 'commodities', 'energy', 'forex'];
+const panelLoaders = {};
+
+function togglePanel(id) {
+  const panel = document.getElementById(`panel-${id}`);
+  const pill = document.getElementById(`pill-${id}`);
   const csPanel = document.getElementById('coming-soon-panel');
   csPanel.classList.remove('open');
-  document.querySelectorAll('.market-pill').forEach(p => p.classList.remove('active'));
+  // Close all other panels
+  livePanels.forEach(p => {
+    if (p !== id) {
+      document.getElementById(`panel-${p}`).classList.remove('open');
+      document.getElementById(`pill-${p}`).classList.remove('active');
+    }
+  });
   const isOpen = panel.classList.toggle('open');
   pill.classList.toggle('active', isOpen);
-  if (isOpen) loadCryptoPanel();
+  if (isOpen && !panelLoaders[id]) {
+    panelLoaders[id] = true;
+    if (id === 'crypto') loadCryptoPanel();
+    else if (id === 'stocks') loadStocksPanel();
+    else if (id === 'commodities') loadCommoditiesPanel();
+    else if (id === 'energy') loadEnergyPanel();
+    else if (id === 'forex') loadForexPanel();
+  }
 }
 
 function showComingSoon(pill, name) {
   const panel = document.getElementById('coming-soon-panel');
-  const cryptoPanel = document.getElementById('crypto-panel');
-  const cryptoPill = document.getElementById('pill-crypto');
-  cryptoPanel.classList.remove('open');
-  cryptoPill.classList.remove('active');
-  const displayName = name === 'more' ? 'More Markets' : name;
-  document.getElementById('coming-soon-name').textContent = displayName;
+  livePanels.forEach(p => {
+    document.getElementById(`panel-${p}`).classList.remove('open');
+    document.getElementById(`pill-${p}`).classList.remove('active');
+  });
   document.querySelectorAll('.market-pill').forEach(p => p.classList.remove('active'));
+  document.getElementById('coming-soon-name').textContent = name === 'more' ? 'More Markets' : name;
   panel.classList.add('open');
   pill.classList.add('active');
 }
 
+function setPriceCard(id, price, change) {
+  const el = document.getElementById(id);
+  const chEl = document.getElementById(id + '-ch');
+  if (el) el.textContent = price;
+  if (chEl) {
+    const up = change >= 0;
+    chEl.textContent = (up ? '▲ ' : '▼ ') + Math.abs(change).toFixed(2) + '%';
+    chEl.className = 'crypto-price-change ' + (up ? 'up' : 'down');
+  }
+}
+
+function setNews(listId, articles) {
+  const el = document.getElementById(listId);
+  if (!el) return;
+  if (!articles || articles.length === 0) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">No news available right now.</div>';
+    return;
+  }
+  el.innerHTML = articles.slice(0, 5).map(a => {
+    const date = new Date(a.datetime * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+    return `<a class="crypto-news-item" href="${a.url}" target="_blank" rel="noopener">
+      <span class="crypto-news-headline">${a.headline}</span>
+      <span class="crypto-news-meta">${a.source} · ${date}</span>
+    </a>`;
+  }).join('');
+}
+
+function setInsights(listId, insights) {
+  const el = document.getElementById(listId);
+  if (el) el.innerHTML = insights.map(i => `<div class="crypto-insight-item">${i}</div>`).join('');
+}
+
+// CRYPTO
 async function loadCryptoPanel() {
   try {
     const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true');
     const d = await r.json();
-    const coins = [
-      { id: 'btc', data: d.bitcoin },
-      { id: 'eth', data: d.ethereum },
-      { id: 'sol', data: d.solana },
-      { id: 'xrp', data: d.ripple },
-    ];
-    coins.forEach(c => {
-      const up = c.data.usd_24h_change >= 0;
-      document.getElementById(`cp-${c.id}`).textContent = '$' + c.data.usd.toLocaleString();
-      const chEl = document.getElementById(`cp-${c.id}-ch`);
-      chEl.textContent = (up ? '▲ ' : '▼ ') + Math.abs(c.data.usd_24h_change).toFixed(2) + '%';
-      chEl.className = 'crypto-price-change ' + (up ? 'up' : 'down');
-    });
+    setPriceCard('cp-btc', '$' + d.bitcoin.usd.toLocaleString(), d.bitcoin.usd_24h_change);
+    setPriceCard('cp-eth', '$' + d.ethereum.usd.toLocaleString(), d.ethereum.usd_24h_change);
+    setPriceCard('cp-sol', '$' + d.solana.usd.toLocaleString(), d.solana.usd_24h_change);
+    setPriceCard('cp-xrp', '$' + d.ripple.usd.toLocaleString(), d.ripple.usd_24h_change);
   } catch(e) {}
-
   try {
     const r = await fetch('https://api.coingecko.com/api/v3/global');
     const d = await r.json();
     const cap = d.data.total_market_cap.usd;
     const chg = d.data.market_cap_change_percentage_24h_usd;
     const fmt = cap >= 1e12 ? '$' + (cap/1e12).toFixed(2) + 'T' : '$' + (cap/1e9).toFixed(0) + 'B';
-    document.getElementById('cp-cap').textContent = fmt;
-    const capCh = document.getElementById('cp-cap-ch');
-    capCh.textContent = (chg >= 0 ? '▲ ' : '▼ ') + Math.abs(chg).toFixed(2) + '%';
-    capCh.className = 'crypto-price-change ' + (chg >= 0 ? 'up' : 'down');
+    setPriceCard('cp-cap', fmt, chg);
     const btcDom = d.data.market_cap_percentage.btc.toFixed(1);
     const ethDom = d.data.market_cap_percentage.eth.toFixed(1);
-    const insights = [
+    setInsights('crypto-insights-list', [
       `📊 Total crypto market cap: ${fmt} (${chg >= 0 ? '+' : ''}${chg.toFixed(2)}% in 24h)`,
       `₿ Bitcoin dominance: ${btcDom}% of total market`,
       `⟠ Ethereum dominance: ${ethDom}% of total market`,
       `${chg >= 0 ? '📈 Market trending upward' : '📉 Market trending downward'} over the last 24 hours`,
       `🌍 Over 10,000 cryptocurrencies tracked globally`,
-    ];
-    document.getElementById('crypto-insights-list').innerHTML = insights.map(i =>
-      `<div class="crypto-insight-item">${i}</div>`
-    ).join('');
+    ]);
   } catch(e) {}
-
   try {
     const r = await fetch('https://api.alternative.me/fng/?limit=1');
     const d = await r.json();
     const val = d.data[0].value;
     const label = d.data[0].value_classification;
-    document.getElementById('cp-fng').textContent = val + ' ' + label;
-    const fngCh = document.getElementById('cp-fng-ch');
-    const up = val > 50;
-    fngCh.textContent = up ? '▲ Bullish' : '▼ Bearish';
-    fngCh.className = 'crypto-price-change ' + (up ? 'up' : 'down');
+    setPriceCard('cp-fng', val + ' ' + label, val > 50 ? val - 50 : -(50 - val));
   } catch(e) {}
-
   try {
     const r = await fetch(`https://finnhub.io/api/v1/news?category=crypto&token=${FINNHUB_KEY}`);
-    const articles = await r.json();
-    const top5 = articles.slice(0, 5);
-    document.getElementById('crypto-news-list').innerHTML = top5.map(a => {
-      const date = new Date(a.datetime * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-      return `<a class="crypto-news-item" href="${a.url}" target="_blank" rel="noopener">
-        <span class="crypto-news-headline">${a.headline}</span>
-        <span class="crypto-news-meta">${a.source} · ${date}</span>
-      </a>`;
-    }).join('');
+    setNews('crypto-news-list', await r.json());
+  } catch(e) { document.getElementById('crypto-news-list').innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">News unavailable.</div>'; }
+}
+
+// STOCKS
+async function loadStocksPanel() {
+  const tickers = [
+    { sym: 'SPY', id: 'sp-spy' }, { sym: 'QQQ', id: 'sp-qqq' },
+    { sym: 'NVDA', id: 'sp-nvda' }, { sym: 'AAPL', id: 'sp-aapl' },
+    { sym: 'TSLA', id: 'sp-tsla' }, { sym: 'META', id: 'sp-meta' },
+  ];
+  const results = await Promise.allSettled(
+    tickers.map(t => fetch(`https://finnhub.io/api/v1/quote?symbol=${t.sym}&token=${FINNHUB_KEY}`).then(r => r.json()))
+  );
+  const changes = [];
+  results.forEach((res, i) => {
+    if (res.status === 'fulfilled' && res.value.c) {
+      const q = res.value;
+      const chg = ((q.c - q.pc) / q.pc) * 100;
+      changes.push(chg);
+      setPriceCard(tickers[i].id, '$' + q.c.toFixed(2), chg);
+    }
+  });
+  const avgChg = changes.length ? changes.reduce((a,b) => a+b, 0) / changes.length : 0;
+  setInsights('stocks-insights-list', [
+    `📊 Tracking top US equities across major indices`,
+    `${avgChg >= 0 ? '📈 Average portfolio up' : '📉 Average portfolio down'} ${Math.abs(avgChg).toFixed(2)}% today`,
+    `🏛️ S&P 500 (SPY) represents top 500 US companies by market cap`,
+    `⚡ NVDA and AI-related stocks remain key market drivers`,
+    `🔔 Set alerts to track your favourite stocks in real time`,
+  ]);
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
+    setNews('stocks-news-list', await r.json());
+  } catch(e) {}
+}
+
+// COMMODITIES
+async function loadCommoditiesPanel() {
+  try {
+    const [gRes, sRes] = await Promise.all([
+      fetch('https://api.gold-api.com/price/XAU'),
+      fetch('https://api.gold-api.com/price/XAG'),
+    ]);
+    const gold = await gRes.json();
+    const silver = await sRes.json();
+    const gp = gold.price || gold.Price || gold.ask || 0;
+    const sp = silver.price || silver.Price || silver.ask || 0;
+    const gChp = gold.chp || 0;
+    const sChp = silver.chp || 0;
+    if (gp) setPriceCard('cm-gold', '$' + parseFloat(gp).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), gChp);
+    if (sp) setPriceCard('cm-silver', '$' + parseFloat(sp).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), sChp);
+    setInsights('commodities-insights-list', [
+      `🥇 Gold is trading at $${parseFloat(gp).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} per troy ounce`,
+      `🥈 Silver is trading at $${parseFloat(sp).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})} per troy ounce`,
+      `📊 Gold/Silver ratio: ${(gp/sp).toFixed(1)}x — historically averages around 60-80x`,
+      `🏦 Central banks continue to accumulate gold reserves globally`,
+      `🌍 Precious metals remain key safe-haven assets in volatile markets`,
+    ]);
   } catch(e) {
-    document.getElementById('crypto-news-list').innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">News unavailable right now.</div>';
+    setInsights('commodities-insights-list', ['📊 Precious metals data loading...']);
   }
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
+    setNews('commodities-news-list', await r.json());
+  } catch(e) {}
+}
+
+// ENERGY
+async function loadEnergyPanel() {
+  try {
+    const [oilRes, gasRes] = await Promise.allSettled([
+      fetch(`https://finnhub.io/api/v1/quote?symbol=WTIC&token=${FINNHUB_KEY}`).then(r => r.json()),
+      fetch(`https://finnhub.io/api/v1/quote?symbol=NG1!&token=${FINNHUB_KEY}`).then(r => r.json()),
+    ]);
+    if (oilRes.status === 'fulfilled' && oilRes.value.c) {
+      const q = oilRes.value;
+      setPriceCard('en-oil', '$' + q.c.toFixed(2), ((q.c - q.pc) / q.pc) * 100);
+    }
+    if (gasRes.status === 'fulfilled' && gasRes.value.c) {
+      const q = gasRes.value;
+      setPriceCard('en-gas', '$' + q.c.toFixed(2), ((q.c - q.pc) / q.pc) * 100);
+    }
+  } catch(e) {}
+  setInsights('energy-insights-list', [
+    `🛢️ WTI Crude Oil is the primary US benchmark for oil pricing`,
+    `🌍 Global energy markets heavily influenced by geopolitical events`,
+    `⚡ Natural gas prices fluctuate seasonally with heating/cooling demand`,
+    `🔋 Energy transition driving long-term shift toward renewables`,
+    `📊 OPEC+ production decisions remain key price drivers`,
+  ]);
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
+    setNews('energy-news-list', await r.json());
+  } catch(e) {}
+}
+
+// FOREX
+async function loadForexPanel() {
+  try {
+    const r = await fetch('https://open.er-api.com/v6/latest/USD');
+    const d = await r.json();
+    if (d.rates) {
+      const pairs = [
+        { id: 'fx-eur', code: 'EUR' }, { id: 'fx-gbp', code: 'GBP' },
+        { id: 'fx-jpy', code: 'JPY' }, { id: 'fx-cad', code: 'CAD' },
+        { id: 'fx-aud', code: 'AUD' }, { id: 'fx-chf', code: 'CHF' },
+      ];
+      pairs.forEach(p => {
+        if (d.rates[p.code]) setPriceCard(p.id, d.rates[p.code].toFixed(4), 0.1);
+      });
+      setInsights('forex-insights-list', [
+        `💱 USD is the world's primary reserve currency`,
+        `📊 EUR/USD is the most traded currency pair globally`,
+        `🇯🇵 JPY rate: ${d.rates.JPY.toFixed(2)} — yen closely watched by Bank of Japan`,
+        `🇬🇧 GBP rate: ${d.rates.GBP.toFixed(4)} — pound influenced by UK economic data`,
+        `🌍 Forex market trades over $7.5 trillion per day globally`,
+      ]);
+    }
+  } catch(e) {
+    setInsights('forex-insights-list', ['💱 Forex data loading...']);
+  }
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/news?category=forex&token=${FINNHUB_KEY}`);
+    setNews('forex-news-list', await r.json());
+  } catch(e) {}
 }
 
 const strip = document.querySelector('.markets-strip');
@@ -752,12 +892,12 @@ strip.addEventListener('touchmove', (e) => {
   <h2 class="section-heading">Every market you can<br />imagine — and then some</h2>
   <p class="section-sub">Spot A Market covers an expansive and growing list of sectors, asset classes, and niche opportunities.</p>
   <div class="markets-grid">
-    <div class="market-pill" id="pill-crypto" onclick="toggleCryptoPanel()"><span class="market-icon">₿</span> Cryptocurrency</div>
-    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Stocks & Equities')"><span class="market-icon">📈</span> Stocks &amp; Equities</div>
+    <div class="market-pill" id="pill-crypto" onclick="togglePanel('crypto')"><span class="market-icon">₿</span> Cryptocurrency</div>
+    <div class="market-pill" id="pill-stocks" onclick="togglePanel('stocks')"><span class="market-icon">📈</span> Stocks &amp; Equities</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Real Estate')"><span class="market-icon">🏠</span> Real Estate</div>
-    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Commodities')"><span class="market-icon">🌾</span> Commodities</div>
-    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Energy')"><span class="market-icon">🛢️</span> Energy</div>
-    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Forex')"><span class="market-icon">💱</span> Forex</div>
+    <div class="market-pill" id="pill-commodities" onclick="togglePanel('commodities')"><span class="market-icon">🌾</span> Commodities</div>
+    <div class="market-pill" id="pill-energy" onclick="togglePanel('energy')"><span class="market-icon">🛢️</span> Energy</div>
+    <div class="market-pill" id="pill-forex" onclick="togglePanel('forex')"><span class="market-icon">💱</span> Forex</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'AI & Tech')"><span class="market-icon">🤖</span> AI &amp; Tech</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Manufacturing')"><span class="market-icon">🏭</span> Manufacturing</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Retail & Consumer')"><span class="market-icon">🛒</span> Retail &amp; Consumer</div>
@@ -770,12 +910,12 @@ strip.addEventListener('touchmove', (e) => {
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'more')"><span class="market-icon">+</span> And many more…</div>
 
     <!-- CRYPTO PANEL -->
-    <div class="crypto-panel" id="crypto-panel">
+    <div class="crypto-panel" id="panel-crypto">
       <div class="crypto-panel-header">
         <div class="crypto-panel-title">₿ Cryptocurrency Market</div>
-        <button class="crypto-panel-close" onclick="toggleCryptoPanel()">✕</button>
+        <button class="crypto-panel-close" onclick="togglePanel('crypto')">✕</button>
       </div>
-      <div class="crypto-prices" id="crypto-panel-prices">
+      <div class="crypto-prices">
         <div class="crypto-price-card"><div class="crypto-price-label">BTC</div><div class="crypto-price-value" id="cp-btc">—</div><div class="crypto-price-change" id="cp-btc-ch">—</div></div>
         <div class="crypto-price-card"><div class="crypto-price-label">ETH</div><div class="crypto-price-value" id="cp-eth">—</div><div class="crypto-price-change" id="cp-eth-ch">—</div></div>
         <div class="crypto-price-card"><div class="crypto-price-label">SOL</div><div class="crypto-price-value" id="cp-sol">—</div><div class="crypto-price-change" id="cp-sol-ch">—</div></div>
@@ -790,6 +930,94 @@ strip.addEventListener('touchmove', (e) => {
       <div>
         <div class="panel-section-title">📰 Latest Crypto News</div>
         <div id="crypto-news-list"><div style="color:var(--muted);font-size:0.875rem;">Loading news...</div></div>
+      </div>
+    </div>
+
+    <!-- STOCKS PANEL -->
+    <div class="crypto-panel" id="panel-stocks">
+      <div class="crypto-panel-header">
+        <div class="crypto-panel-title">📈 Stocks & Equities</div>
+        <button class="crypto-panel-close" onclick="togglePanel('stocks')">✕</button>
+      </div>
+      <div class="crypto-prices">
+        <div class="crypto-price-card"><div class="crypto-price-label">S&P 500 (SPY)</div><div class="crypto-price-value" id="sp-spy">—</div><div class="crypto-price-change" id="sp-spy-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Nasdaq (QQQ)</div><div class="crypto-price-value" id="sp-qqq">—</div><div class="crypto-price-change" id="sp-qqq-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">NVDA</div><div class="crypto-price-value" id="sp-nvda">—</div><div class="crypto-price-change" id="sp-nvda-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Apple</div><div class="crypto-price-value" id="sp-aapl">—</div><div class="crypto-price-change" id="sp-aapl-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Tesla</div><div class="crypto-price-value" id="sp-tsla">—</div><div class="crypto-price-change" id="sp-tsla-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Meta</div><div class="crypto-price-value" id="sp-meta">—</div><div class="crypto-price-change" id="sp-meta-ch">—</div></div>
+      </div>
+      <div class="crypto-insights">
+        <div class="panel-section-title">💡 Market Insights</div>
+        <div id="stocks-insights-list"><div style="color:var(--muted);font-size:0.875rem;">Loading insights...</div></div>
+      </div>
+      <div>
+        <div class="panel-section-title">📰 Latest Market News</div>
+        <div id="stocks-news-list"><div style="color:var(--muted);font-size:0.875rem;">Loading news...</div></div>
+      </div>
+    </div>
+
+    <!-- COMMODITIES PANEL -->
+    <div class="crypto-panel" id="panel-commodities">
+      <div class="crypto-panel-header">
+        <div class="crypto-panel-title">🌾 Commodities Market</div>
+        <button class="crypto-panel-close" onclick="togglePanel('commodities')">✕</button>
+      </div>
+      <div class="crypto-prices">
+        <div class="crypto-price-card"><div class="crypto-price-label">Gold (XAU)</div><div class="crypto-price-value" id="cm-gold">—</div><div class="crypto-price-change" id="cm-gold-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Silver (XAG)</div><div class="crypto-price-value" id="cm-silver">—</div><div class="crypto-price-change" id="cm-silver-ch">—</div></div>
+      </div>
+      <div class="crypto-insights">
+        <div class="panel-section-title">💡 Market Insights</div>
+        <div id="commodities-insights-list"><div style="color:var(--muted);font-size:0.875rem;">Loading insights...</div></div>
+      </div>
+      <div>
+        <div class="panel-section-title">📰 Latest Commodities News</div>
+        <div id="commodities-news-list"><div style="color:var(--muted);font-size:0.875rem;">Loading news...</div></div>
+      </div>
+    </div>
+
+    <!-- ENERGY PANEL -->
+    <div class="crypto-panel" id="panel-energy">
+      <div class="crypto-panel-header">
+        <div class="crypto-panel-title">🛢️ Energy Market</div>
+        <button class="crypto-panel-close" onclick="togglePanel('energy')">✕</button>
+      </div>
+      <div class="crypto-prices">
+        <div class="crypto-price-card"><div class="crypto-price-label">Oil (WTI)</div><div class="crypto-price-value" id="en-oil">—</div><div class="crypto-price-change" id="en-oil-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Nat. Gas</div><div class="crypto-price-value" id="en-gas">—</div><div class="crypto-price-change" id="en-gas-ch">—</div></div>
+      </div>
+      <div class="crypto-insights">
+        <div class="panel-section-title">💡 Market Insights</div>
+        <div id="energy-insights-list"><div style="color:var(--muted);font-size:0.875rem;">Loading insights...</div></div>
+      </div>
+      <div>
+        <div class="panel-section-title">📰 Latest Energy News</div>
+        <div id="energy-news-list"><div style="color:var(--muted);font-size:0.875rem;">Loading news...</div></div>
+      </div>
+    </div>
+
+    <!-- FOREX PANEL -->
+    <div class="crypto-panel" id="panel-forex">
+      <div class="crypto-panel-header">
+        <div class="crypto-panel-title">💱 Forex Market</div>
+        <button class="crypto-panel-close" onclick="togglePanel('forex')">✕</button>
+      </div>
+      <div class="crypto-prices">
+        <div class="crypto-price-card"><div class="crypto-price-label">USD/EUR</div><div class="crypto-price-value" id="fx-eur">—</div><div class="crypto-price-change" id="fx-eur-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">USD/GBP</div><div class="crypto-price-value" id="fx-gbp">—</div><div class="crypto-price-change" id="fx-gbp-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">USD/JPY</div><div class="crypto-price-value" id="fx-jpy">—</div><div class="crypto-price-change" id="fx-jpy-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">USD/CAD</div><div class="crypto-price-value" id="fx-cad">—</div><div class="crypto-price-change" id="fx-cad-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">USD/AUD</div><div class="crypto-price-value" id="fx-aud">—</div><div class="crypto-price-change" id="fx-aud-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">USD/CHF</div><div class="crypto-price-value" id="fx-chf">—</div><div class="crypto-price-change" id="fx-chf-ch">—</div></div>
+      </div>
+      <div class="crypto-insights">
+        <div class="panel-section-title">💡 Market Insights</div>
+        <div id="forex-insights-list"><div style="color:var(--muted);font-size:0.875rem;">Loading insights...</div></div>
+      </div>
+      <div>
+        <div class="panel-section-title">📰 Latest Forex News</div>
+        <div id="forex-news-list"><div style="color:var(--muted);font-size:0.875rem;">Loading news...</div></div>
       </div>
     </div>
 
