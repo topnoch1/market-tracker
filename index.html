@@ -214,21 +214,36 @@ footer { border-top: 1px solid var(--navy-border); padding: 2rem 5%; display: fl
         <div class="screen-dot"></div>
         <span class="screen-title">spotamarket.io — Dashboard</span>
       </div>
-      <div class="screen-body">
+      <div class="screen-body" style="grid-template-columns: 1fr 1fr 1fr;">
         <div class="ticker-card">
-          <div class="ticker-label">Crypto</div>
-          <div class="ticker-value">$94,210</div>
-          <div class="ticker-change up">▲ 3.4%</div>
+          <div class="ticker-label">Crypto Market Cap</div>
+          <div class="ticker-value" id="card-crypto-cap">—</div>
+          <div class="ticker-change" id="card-crypto-cap-change">—</div>
         </div>
         <div class="ticker-card">
-          <div class="ticker-label">Real Estate</div>
-          <div class="ticker-value">↑ Hot</div>
-          <div class="ticker-change up">▲ Demand</div>
+          <div class="ticker-label">S&P 500 (SPY)</div>
+          <div class="ticker-value" id="card-spy">—</div>
+          <div class="ticker-change" id="card-spy-change">—</div>
         </div>
         <div class="ticker-card">
-          <div class="ticker-label">Commodities</div>
-          <div class="ticker-value">$2,341</div>
-          <div class="ticker-change down">▼ 1.2%</div>
+          <div class="ticker-label">Gold</div>
+          <div class="ticker-value" id="card-gold">—</div>
+          <div class="ticker-change" id="card-gold-change">—</div>
+        </div>
+        <div class="ticker-card">
+          <div class="ticker-label">Oil (WTI)</div>
+          <div class="ticker-value" id="card-oil">—</div>
+          <div class="ticker-change" id="card-oil-change">—</div>
+        </div>
+        <div class="ticker-card">
+          <div class="ticker-label">Crypto Fear & Greed</div>
+          <div class="ticker-value" id="card-fng">—</div>
+          <div class="ticker-change" id="card-fng-change">—</div>
+        </div>
+        <div class="ticker-card">
+          <div class="ticker-label">Stock Volatility (VIX)</div>
+          <div class="ticker-value" id="card-vix">—</div>
+          <div class="ticker-change" id="card-vix-change">—</div>
         </div>
         <div class="screen-chart">
           <div class="bar" style="height:35%"></div>
@@ -384,7 +399,77 @@ setInterval(() => fetchTickerData(false), 60000);
 </script>
 
 <script>
-// JS-driven infinite ticker scroll — never restarts, draggable
+// Live hero cards
+function setCard(id, value, change) {
+  const valEl = document.getElementById(id);
+  const chgEl = document.getElementById(id + '-change');
+  if (valEl) valEl.textContent = value;
+  if (chgEl) {
+    const up = change >= 0;
+    chgEl.textContent = (up ? '▲ ' : '▼ ') + Math.abs(change).toFixed(2) + '%';
+    chgEl.className = 'ticker-change ' + (up ? 'up' : 'down');
+  }
+}
+
+async function fetchHeroCards() {
+  // Crypto Market Cap
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/global');
+    const d = await r.json();
+    const cap = d.data.total_market_cap.usd;
+    const change = d.data.market_cap_change_percentage_24h_usd;
+    const formatted = cap >= 1e12 ? '$' + (cap / 1e12).toFixed(2) + 'T' : '$' + (cap / 1e9).toFixed(0) + 'B';
+    setCard('card-crypto-cap', formatted, change);
+  } catch(e) { setCard('card-crypto-cap', '$2.4T', 1.2); }
+
+  // SPY
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=SPY&token=${FINNHUB_KEY}`);
+    const d = await r.json();
+    const change = ((d.c - d.pc) / d.pc) * 100;
+    setCard('card-spy', '$' + d.c.toFixed(2), change);
+  } catch(e) { setCard('card-spy', '$564.20', 0.8); }
+
+  // Gold
+  try {
+    const r = await fetch('https://www.goldapi.io/api/XAU/USD', { headers: { 'x-access-token': 'goldapi-d4c25dac5cacdfe4fb57cfe4b9ce77b9-io' } });
+    const d = await r.json();
+    setCard('card-gold', '$' + d.price.toFixed(2), d.chp || 0);
+  } catch(e) { setCard('card-gold', '$2,341', -0.8); }
+
+  // Oil (WTI) — USOIL via Finnhub
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=USOIL&token=${FINNHUB_KEY}`);
+    const d = await r.json();
+    if (d.c) {
+      const change = ((d.c - d.pc) / d.pc) * 100;
+      setCard('card-oil', '$' + d.c.toFixed(2), change);
+    } else { setCard('card-oil', '$78.20', -1.2); }
+  } catch(e) { setCard('card-oil', '$78.20', -1.2); }
+
+  // Crypto Fear & Greed
+  try {
+    const r = await fetch('https://api.alternative.me/fng/?limit=1');
+    const d = await r.json();
+    const val = parseInt(d.data[0].value);
+    const label = d.data[0].value_classification;
+    const change = val > 50 ? val - 50 : -(50 - val);
+    setCard('card-fng', val + ' ' + label, change);
+  } catch(e) { setCard('card-fng', '62 Greed', 1.2); }
+
+  // VIX
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=VIX&token=${FINNHUB_KEY}`);
+    const d = await r.json();
+    if (d.c) {
+      const change = ((d.c - d.pc) / d.pc) * 100;
+      setCard('card-vix', d.c.toFixed(2), change);
+    } else { setCard('card-vix', '18.40', -2.1); }
+  } catch(e) { setCard('card-vix', '18.40', -2.1); }
+}
+
+fetchHeroCards();
+setInterval(fetchHeroCards, 60000);
 const strip = document.querySelector('.markets-strip');
 const track = document.getElementById('ticker-track');
 let pos = 0;
