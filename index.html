@@ -437,15 +437,15 @@ async function fetchHeroCards() {
     setCard('card-gold', '$' + d.price.toFixed(2), d.chp || 0);
   } catch(e) { setCard('card-gold', '$2,341', -0.8); }
 
-  // Oil (WTI) — USOIL via Finnhub
+  // Oil (WTI) — WTIC via Finnhub
   try {
-    const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=USOIL&token=${FINNHUB_KEY}`);
+    const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=WTIC&token=${FINNHUB_KEY}`);
     const d = await r.json();
     if (d.c) {
       const change = ((d.c - d.pc) / d.pc) * 100;
       setCard('card-oil', '$' + d.c.toFixed(2), change);
-    } else { setCard('card-oil', '$78.20', -1.2); }
-  } catch(e) { setCard('card-oil', '$78.20', -1.2); }
+    } else { setCard('card-oil', '$59.20', -1.2); }
+  } catch(e) { setCard('card-oil', '$59.20', -1.2); }
 
   // Crypto Fear & Greed
   try {
