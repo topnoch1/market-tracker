@@ -338,8 +338,8 @@ async function fetchTickerData(firstLoad) {
 
   const [cryptoResult, goldResult, silverResult, forexResult, ...stockResults] = await Promise.allSettled([
     fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true').then(r => r.json()),
-    fetch(`https://finnhub.io/api/v1/quote?symbol=OANDA:XAU_USD&token=${FINNHUB_KEY}`).then(r => r.json()),
-    fetch(`https://finnhub.io/api/v1/quote?symbol=OANDA:XAG_USD&token=${FINNHUB_KEY}`).then(r => r.json()),
+    fetch('https://gold-api.com/price/XAU', { headers: { 'x-access-token': '0171b0aec54a923fe37bfab6eaa390e6da231ae8002fba0fe39ea6c74de0352c' } }).then(r => r.json()),
+    fetch('https://gold-api.com/price/XAG', { headers: { 'x-access-token': '0171b0aec54a923fe37bfab6eaa390e6da231ae8002fba0fe39ea6c74de0352c' } }).then(r => r.json()),
     fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json()),
     ...stocks.map(s => fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${FINNHUB_KEY}`).then(r => r.json()))
   ]);
@@ -358,18 +358,16 @@ async function fetchTickerData(firstLoad) {
     items.push({ label: 'SOL', price: '$142', change: 1.8 });
   }
 
-  if (goldResult.status === 'fulfilled' && goldResult.value.c) {
+  if (goldResult.status === 'fulfilled' && goldResult.value.price) {
     const d = goldResult.value;
-    const change = ((d.c - d.pc) / d.pc) * 100;
-    items.push({ label: 'Gold', price: '$' + d.c.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change });
+    items.push({ label: 'Gold', price: '$' + d.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: d.chp || 0 });
   } else {
     items.push({ label: 'Gold', price: '$4,542', change: -0.8 });
   }
 
-  if (silverResult.status === 'fulfilled' && silverResult.value.c) {
+  if (silverResult.status === 'fulfilled' && silverResult.value.price) {
     const d = silverResult.value;
-    const change = ((d.c - d.pc) / d.pc) * 100;
-    items.push({ label: 'Silver', price: '$' + d.c.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change });
+    items.push({ label: 'Silver', price: '$' + d.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: d.chp || 0 });
   } else {
     items.push({ label: 'Silver', price: '$74.66', change: -1.4 });
   }
@@ -403,8 +401,8 @@ async function fetchTickerData(firstLoad) {
 
 // First load — build ticker DOM
 fetchTickerData(true);
-// Every 60 seconds — silently update prices, ticker never stops
-setInterval(() => fetchTickerData(false), 60000);
+// Every 5 hours — silently update prices to stay within GoldAPI daily limit
+setInterval(() => fetchTickerData(false), 5 * 60 * 60 * 1000);
 </script>
 
 <script>
@@ -441,11 +439,10 @@ async function fetchHeroCards() {
 
   // Gold
   try {
-    const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=OANDA:XAU_USD&token=${FINNHUB_KEY}`);
+    const r = await fetch('https://gold-api.com/price/XAU', { headers: { 'x-access-token': '0171b0aec54a923fe37bfab6eaa390e6da231ae8002fba0fe39ea6c74de0352c' } });
     const d = await r.json();
-    if (d.c) {
-      const change = ((d.c - d.pc) / d.pc) * 100;
-      setCard('card-gold', '$' + d.c.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change);
+    if (d.price) {
+      setCard('card-gold', '$' + d.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), d.chp || 0);
     } else { setCard('card-gold', '$4,542', -0.8); }
   } catch(e) { setCard('card-gold', '$4,542', -0.8); }
 
@@ -481,7 +478,7 @@ async function fetchHeroCards() {
 }
 
 fetchHeroCards();
-setInterval(fetchHeroCards, 60000);
+setInterval(fetchHeroCards, 5 * 60 * 60 * 1000);
 const strip = document.querySelector('.markets-strip');
 const track = document.getElementById('ticker-track');
 let pos = 0;
