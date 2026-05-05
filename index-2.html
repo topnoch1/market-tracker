@@ -325,7 +325,42 @@ async function fetchTickerData() {
     items.push({ label: 'Crypto Fear & Greed', price: '62 Greed', change: 1.2 });
   }
 
-  // 4. FOREX — ExchangeRate-API (free, no key)
+  // 4. STOCKS — Alpha Vantage (free, loads once per day)
+  const AV_KEY = 'B5G843I7BHE1670A';
+  const stocks = [
+    { symbol: 'SPY', label: 'S&P 500 (SPY)' },
+    { symbol: 'QQQ', label: 'Nasdaq (QQQ)' },
+    { symbol: 'NVDA', label: 'NVDA' },
+    { symbol: 'MSFT', label: 'Microsoft' },
+    { symbol: 'AAPL', label: 'Apple' },
+    { symbol: 'GOOGL', label: 'Google' },
+    { symbol: 'AMD', label: 'AMD' },
+    { symbol: 'AMZN', label: 'Amazon' },
+    { symbol: 'HOOD', label: 'Robinhood' },
+    { symbol: 'COIN', label: 'Coinbase' },
+    { symbol: 'META', label: 'Meta' },
+    { symbol: 'TSLA', label: 'Tesla' },
+  ];
+
+  for (const stock of stocks) {
+    try {
+      const r = await fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${stock.symbol}&apikey=${AV_KEY}`);
+      const d = await r.json();
+      const q = d['Global Quote'];
+      if (q && q['05. price']) {
+        const price = parseFloat(q['05. price']);
+        const open = parseFloat(q['02. open']);
+        const change = parseFloat(q['10. change percent'].replace('%', ''));
+        items.push({
+          label: stock.label,
+          price: `$${price.toFixed(2)} (Open: $${open.toFixed(2)})`,
+          change: change
+        });
+      }
+    } catch(e) {
+      // skip if individual stock fails
+    }
+  }
   try {
     const r = await fetch('https://open.er-api.com/v6/latest/USD');
     const d = await r.json();
