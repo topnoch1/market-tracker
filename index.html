@@ -338,8 +338,8 @@ async function fetchTickerData(firstLoad) {
 
   const [cryptoResult, goldResult, silverResult, forexResult, ...stockResults] = await Promise.allSettled([
     fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true').then(r => r.json()),
-    fetch('https://www.goldapi.io/api/XAU/USD', { headers: { 'x-access-token': 'goldapi-d4c25dac5cacdfe4fb57cfe4b9ce77b9-io' } }).then(r => r.json()),
-    fetch('https://www.goldapi.io/api/XAG/USD', { headers: { 'x-access-token': 'goldapi-d4c25dac5cacdfe4fb57cfe4b9ce77b9-io' } }).then(r => r.json()),
+    fetch(`https://finnhub.io/api/v1/quote?symbol=OANDA:XAU_USD&token=${FINNHUB_KEY}`).then(r => r.json()),
+    fetch(`https://finnhub.io/api/v1/quote?symbol=OANDA:XAG_USD&token=${FINNHUB_KEY}`).then(r => r.json()),
     fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json()),
     ...stocks.map(s => fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${FINNHUB_KEY}`).then(r => r.json()))
   ]);
@@ -358,18 +358,20 @@ async function fetchTickerData(firstLoad) {
     items.push({ label: 'SOL', price: '$142', change: 1.8 });
   }
 
-  if (goldResult.status === 'fulfilled' && goldResult.value.price) {
+  if (goldResult.status === 'fulfilled' && goldResult.value.c) {
     const d = goldResult.value;
-    items.push({ label: 'Gold', price: '$' + d.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: d.ch || 0 });
+    const change = ((d.c - d.pc) / d.pc) * 100;
+    items.push({ label: 'Gold', price: '$' + d.c.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change });
   } else {
     items.push({ label: 'Gold', price: '$4,542', change: -0.8 });
   }
 
-  if (silverResult.status === 'fulfilled' && silverResult.value.price) {
+  if (silverResult.status === 'fulfilled' && silverResult.value.c) {
     const d = silverResult.value;
-    items.push({ label: 'Silver', price: '$' + d.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: d.ch || 0 });
+    const change = ((d.c - d.pc) / d.pc) * 100;
+    items.push({ label: 'Silver', price: '$' + d.c.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change });
   } else {
-    items.push({ label: 'Silver', price: '$27.40', change: 0.3 });
+    items.push({ label: 'Silver', price: '$74.66', change: -1.4 });
   }
 
   stockResults.forEach((result, i) => {
@@ -439,9 +441,12 @@ async function fetchHeroCards() {
 
   // Gold
   try {
-    const r = await fetch('https://www.goldapi.io/api/XAU/USD', { headers: { 'x-access-token': 'goldapi-d4c25dac5cacdfe4fb57cfe4b9ce77b9-io' } });
+    const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=OANDA:XAU_USD&token=${FINNHUB_KEY}`);
     const d = await r.json();
-    setCard('card-gold', '$' + d.price.toFixed(2), d.chp || 0);
+    if (d.c) {
+      const change = ((d.c - d.pc) / d.pc) * 100;
+      setCard('card-gold', '$' + d.c.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change);
+    } else { setCard('card-gold', '$4,542', -0.8); }
   } catch(e) { setCard('card-gold', '$4,542', -0.8); }
 
   // Oil (WTI) — WTIC via Finnhub
