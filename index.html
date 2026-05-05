@@ -123,11 +123,9 @@ section { position: relative; z-index: 1; padding: 6rem 5%; }
 .section-sub { color: var(--muted); max-width: 520px; font-weight: 300; }
 .markets-strip { position: relative; z-index: 1; overflow: hidden; border-top: 1px solid var(--navy-border); border-bottom: 1px solid var(--navy-border); padding: 1rem 0; background: var(--navy-mid); cursor: grab; user-select: none; }
 .markets-strip.dragging { cursor: grabbing; }
-.ticker-track { display: flex; gap: 3rem; white-space: nowrap; animation: ticker 60s linear infinite; }
-.ticker-track.paused { animation-play-state: paused; }
+.ticker-track { display: flex; gap: 3rem; white-space: nowrap; }
 .ticker-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--muted); flex-shrink: 0; }
 .ticker-item strong { color: var(--white); font-weight: 500; }
-@keyframes ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
 .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-top: 4rem; }
 .feature-card { background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 10px; padding: 2rem; transition: border-color 0.3s, transform 0.3s; position: relative; overflow: hidden; }
 .feature-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: var(--electric); opacity: 0; transition: opacity 0.3s; }
@@ -386,59 +384,72 @@ setInterval(() => fetchTickerData(false), 60000);
 </script>
 
 <script>
-// Drag to scroll ticker
+// JS-driven infinite ticker scroll — never restarts, draggable
 const strip = document.querySelector('.markets-strip');
 const track = document.getElementById('ticker-track');
+let pos = 0;
+let speed = 0.5; // pixels per frame
 let isDragging = false;
-let startX = 0;
-let scrollLeft = 0;
+let dragStartX = 0;
+let dragStartPos = 0;
+let isPaused = false;
+let resumeTimer = null;
 
+function animateTicker() {
+  if (!isDragging && !isPaused) {
+    pos += speed;
+    const half = track.scrollWidth / 2;
+    if (pos >= half) pos -= half; // seamless loop
+    track.style.transform = `translateX(-${pos}px)`;
+  }
+  requestAnimationFrame(animateTicker);
+}
+
+animateTicker();
+
+// Mouse drag
 strip.addEventListener('mousedown', (e) => {
   isDragging = true;
   strip.classList.add('dragging');
-  track.classList.add('paused');
-  startX = e.pageX - strip.offsetLeft;
-  scrollLeft = strip.scrollLeft;
+  dragStartX = e.pageX;
+  dragStartPos = pos;
+  clearTimeout(resumeTimer);
 });
 
-strip.addEventListener('mouseleave', () => {
-  if (isDragging) {
-    isDragging = false;
-    strip.classList.remove('dragging');
-    // Resume auto-scroll after 2 seconds
-    setTimeout(() => track.classList.remove('paused'), 2000);
-  }
-});
-
-strip.addEventListener('mouseup', () => {
+window.addEventListener('mouseup', () => {
+  if (!isDragging) return;
   isDragging = false;
   strip.classList.remove('dragging');
-  setTimeout(() => track.classList.remove('paused'), 2000);
+  resumeTimer = setTimeout(() => { isPaused = false; }, 1500);
 });
 
-strip.addEventListener('mousemove', (e) => {
+window.addEventListener('mousemove', (e) => {
   if (!isDragging) return;
-  e.preventDefault();
-  const x = e.pageX - strip.offsetLeft;
-  const walk = (x - startX) * 2;
-  strip.scrollLeft = scrollLeft - walk;
+  const delta = dragStartX - e.pageX;
+  const half = track.scrollWidth / 2;
+  pos = ((dragStartPos + delta) % half + half) % half;
+  track.style.transform = `translateX(-${pos}px)`;
 });
 
-// Touch support for mobile
+// Touch drag
 strip.addEventListener('touchstart', (e) => {
-  track.classList.add('paused');
-  startX = e.touches[0].pageX - strip.offsetLeft;
-  scrollLeft = strip.scrollLeft;
+  isDragging = true;
+  dragStartX = e.touches[0].pageX;
+  dragStartPos = pos;
+  clearTimeout(resumeTimer);
 }, { passive: true });
 
 strip.addEventListener('touchend', () => {
-  setTimeout(() => track.classList.remove('paused'), 2000);
+  isDragging = false;
+  resumeTimer = setTimeout(() => { isPaused = false; }, 1500);
 });
 
 strip.addEventListener('touchmove', (e) => {
-  const x = e.touches[0].pageX - strip.offsetLeft;
-  const walk = (x - startX) * 2;
-  strip.scrollLeft = scrollLeft - walk;
+  if (!isDragging) return;
+  const delta = dragStartX - e.touches[0].pageX;
+  const half = track.scrollWidth / 2;
+  pos = ((dragStartPos + delta) % half + half) % half;
+  track.style.transform = `translateX(-${pos}px)`;
 }, { passive: true });
 </script>
 
