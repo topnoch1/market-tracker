@@ -123,7 +123,7 @@ section { position: relative; z-index: 1; padding: 6rem 5%; }
 .section-sub { color: var(--muted); max-width: 520px; font-weight: 300; }
 .markets-strip { position: relative; z-index: 1; overflow: hidden; border-top: 1px solid var(--navy-border); border-bottom: 1px solid var(--navy-border); padding: 1rem 0; background: var(--navy-mid); cursor: grab; user-select: none; }
 .markets-strip.dragging { cursor: grabbing; }
-.ticker-track { display: flex; gap: 3rem; white-space: nowrap; animation: ticker 20s linear infinite; }
+.ticker-track { display: flex; gap: 3rem; white-space: nowrap; animation: ticker 40s linear infinite; }
 .ticker-track.paused { animation-play-state: paused; }
 .ticker-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--muted); flex-shrink: 0; }
 .ticker-item strong { color: var(--white); font-weight: 500; }
@@ -268,24 +268,40 @@ footer { border-top: 1px solid var(--navy-border); padding: 2rem 5%; display: fl
 
 <script>
 const FINNHUB_KEY = 'd7sm6qpr01qorsvj8a1gd7sm6qpr01qorsvj8a20';
-const LOOP_DURATION = 20000; // 20 seconds per loop
-let refreshTimer = null;
+let latestItems = [];
 
-function buildTicker(items) {
-  const html = items.map(item => {
+function renderTicker() {
+  const html = latestItems.map((item, i) => {
     const up = item.change >= 0;
     const arrow = up ? '▲' : '▼';
     const cls = up ? 'up' : 'down';
     const changeStr = `${arrow} ${Math.abs(item.change).toFixed(2)}%`;
-    return `<span class="ticker-item"><strong>${item.label}</strong> ${item.price} <span class="${cls}">${changeStr}</span></span>`;
+    return `<span class="ticker-item" data-index="${i}"><strong>${item.label}</strong> <span class="ticker-price">${item.price}</span> <span class="${cls} ticker-change">${changeStr}</span></span>`;
   }).join('');
   const track = document.getElementById('ticker-track');
   track.innerHTML = html + html;
 }
 
-async function fetchTickerData() {
-  const items = [];
+function updatePricesInPlace() {
+  document.querySelectorAll('.ticker-item').forEach(el => {
+    const i = parseInt(el.getAttribute('data-index'));
+    if (latestItems[i]) {
+      const item = latestItems[i];
+      const up = item.change >= 0;
+      const arrow = up ? '▲' : '▼';
+      const cls = up ? 'up' : 'down';
+      const priceEl = el.querySelector('.ticker-price');
+      const changeEl = el.querySelector('.ticker-change');
+      if (priceEl) priceEl.textContent = item.price;
+      if (changeEl) {
+        changeEl.className = cls + ' ticker-change';
+        changeEl.textContent = `${arrow} ${Math.abs(item.change).toFixed(2)}%`;
+      }
+    }
+  });
+}
 
+async function fetchTickerData(firstLoad) {
   const stocks = [
     { symbol: 'SPY', label: 'S&P 500 (SPY)' },
     { symbol: 'QQQ', label: 'Nasdaq (QQQ)' },
@@ -298,21 +314,15 @@ async function fetchTickerData() {
   ];
 
   const [cryptoResult, goldResult, silverResult, forexResult, ...stockResults] = await Promise.allSettled([
-    // CRYPTO
     fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true').then(r => r.json()),
-    // GOLD
     fetch('https://www.goldapi.io/api/XAU/USD', { headers: { 'x-access-token': 'goldapi-d4c25dac5cacdfe4fb57cfe4b9ce77b9-io' } }).then(r => r.json()),
-    // SILVER
     fetch('https://www.goldapi.io/api/XAG/USD', { headers: { 'x-access-token': 'goldapi-d4c25dac5cacdfe4fb57cfe4b9ce77b9-io' } }).then(r => r.json()),
-    // FOREX
     fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json()),
-    // STOCKS via Finnhub
-    ...stocks.map(s =>
-      fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${FINNHUB_KEY}`).then(r => r.json())
-    )
+    ...stocks.map(s => fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${FINNHUB_KEY}`).then(r => r.json()))
   ]);
 
-  // CRYPTO
+  const items = [];
+
   if (cryptoResult.status === 'fulfilled') {
     const d = cryptoResult.value;
     items.push({ label: 'BTC', price: '$' + d.bitcoin.usd.toLocaleString(), change: d.bitcoin.usd_24h_change });
@@ -325,7 +335,6 @@ async function fetchTickerData() {
     items.push({ label: 'SOL', price: '$142', change: 1.8 });
   }
 
-  // GOLD
   if (goldResult.status === 'fulfilled' && goldResult.value.price) {
     const d = goldResult.value;
     items.push({ label: 'Gold', price: '$' + d.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: d.ch || 0 });
@@ -333,7 +342,6 @@ async function fetchTickerData() {
     items.push({ label: 'Gold', price: '$2,341', change: -0.8 });
   }
 
-  // SILVER
   if (silverResult.status === 'fulfilled' && silverResult.value.price) {
     const d = silverResult.value;
     items.push({ label: 'Silver', price: '$' + d.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: d.ch || 0 });
@@ -341,22 +349,14 @@ async function fetchTickerData() {
     items.push({ label: 'Silver', price: '$27.40', change: 0.3 });
   }
 
-  // STOCKS via Finnhub
   stockResults.forEach((result, i) => {
     if (result.status === 'fulfilled' && result.value.c) {
       const q = result.value;
-      const price = q.c; // current price
-      const open = q.o;  // open price
-      const change = ((q.c - q.pc) / q.pc) * 100; // % change from prev close
-      items.push({
-        label: stocks[i].label,
-        price: `$${price.toFixed(2)} (Open: $${open.toFixed(2)})`,
-        change: change
-      });
+      const change = ((q.c - q.pc) / q.pc) * 100;
+      items.push({ label: stocks[i].label, price: `$${q.c.toFixed(2)} (Open: $${q.o.toFixed(2)})`, change });
     }
   });
 
-  // FOREX
   if (forexResult.status === 'fulfilled' && forexResult.value.rates) {
     const d = forexResult.value;
     items.push({ label: 'USD/EUR', price: d.rates.EUR.toFixed(4), change: 0.1 });
@@ -367,22 +367,19 @@ async function fetchTickerData() {
     items.push({ label: 'USD/GBP', price: '0.7891', change: -0.05 });
   }
 
-  buildTicker(items);
+  latestItems = items;
+
+  if (firstLoad) {
+    renderTicker();
+  } else {
+    updatePricesInPlace();
+  }
 }
 
-// On load: fetch data, then wait 2 full loops before refreshing
-fetchTickerData().then(() => {
-  scheduleNextRefresh();
-});
-
-function scheduleNextRefresh() {
-  // Wait for 2 full loops (2 x 20s = 40s) then refresh
-  refreshTimer = setTimeout(() => {
-    fetchTickerData().then(() => {
-      scheduleNextRefresh();
-    });
-  }, LOOP_DURATION * 2);
-}
+// First load — build ticker DOM
+fetchTickerData(true);
+// Every 60 seconds — silently update prices, ticker never stops
+setInterval(() => fetchTickerData(false), 60000);
 </script>
 
 <script>
