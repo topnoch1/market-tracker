@@ -293,7 +293,7 @@ async function fetchTickerData() {
     // 4. FOREX
     fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json()),
     // 5. STOCKS — all in parallel
-    ...['SPY','QQQ','NVDA','MSFT','AAPL','GOOGL','AMD','AMZN','HOOD','COIN','META','TSLA'].map(sym =>
+    ...['SPY','QQQ','NVDA'].map(sym =>
       fetch(`https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${sym}&apikey=B5G843I7BHE1670A`).then(r => r.json())
     )
   ]);
@@ -332,15 +332,6 @@ async function fetchTickerData() {
     { symbol: 'SPY', label: 'S&P 500 (SPY)' },
     { symbol: 'QQQ', label: 'Nasdaq (QQQ)' },
     { symbol: 'NVDA', label: 'NVDA' },
-    { symbol: 'MSFT', label: 'Microsoft' },
-    { symbol: 'AAPL', label: 'Apple' },
-    { symbol: 'GOOGL', label: 'Google' },
-    { symbol: 'AMD', label: 'AMD' },
-    { symbol: 'AMZN', label: 'Amazon' },
-    { symbol: 'HOOD', label: 'Robinhood' },
-    { symbol: 'COIN', label: 'Coinbase' },
-    { symbol: 'META', label: 'Meta' },
-    { symbol: 'TSLA', label: 'Tesla' },
   ];
   stockResults.forEach((result, i) => {
     if (result.status === 'fulfilled') {
