@@ -123,7 +123,7 @@ section { position: relative; z-index: 1; padding: 6rem 5%; }
 .section-sub { color: var(--muted); max-width: 520px; font-weight: 300; }
 .markets-strip { position: relative; z-index: 1; overflow: hidden; border-top: 1px solid var(--navy-border); border-bottom: 1px solid var(--navy-border); padding: 1rem 0; background: var(--navy-mid); cursor: grab; user-select: none; }
 .markets-strip.dragging { cursor: grabbing; }
-.ticker-track { display: flex; gap: 3rem; white-space: nowrap; animation: ticker 40s linear infinite; }
+.ticker-track { display: flex; gap: 3rem; white-space: nowrap; animation: ticker 60s linear infinite; }
 .ticker-track.paused { animation-play-state: paused; }
 .ticker-item { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8rem; color: var(--muted); flex-shrink: 0; }
 .ticker-item strong { color: var(--white); font-weight: 500; }
@@ -269,8 +269,11 @@ footer { border-top: 1px solid var(--navy-border); padding: 2rem 5%; display: fl
 <script>
 const FINNHUB_KEY = 'd7sm6qpr01qorsvj8a1gd7sm6qpr01qorsvj8a20';
 let latestItems = [];
+let tickerBuilt = false;
 
 function renderTicker() {
+  if (tickerBuilt) return; // never rebuild after first render
+  tickerBuilt = true;
   const html = latestItems.map((item, i) => {
     const up = item.change >= 0;
     const arrow = up ? '▲' : '▼';
