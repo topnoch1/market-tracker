@@ -144,8 +144,35 @@ section { position: relative; z-index: 1; padding: 6rem 5%; }
 .step-title { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; margin-bottom: 0.4rem; }
 .step-desc { color: var(--muted); font-size: 0.875rem; font-weight: 300; line-height: 1.65; }
 .markets-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; margin-top: 4rem; }
-.market-pill { background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 6px; padding: 0.9rem 1.2rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.875rem; font-weight: 500; transition: border-color 0.2s, background 0.2s; cursor: default; }
+.market-pill { background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 6px; padding: 0.9rem 1.2rem; display: flex; align-items: center; gap: 0.6rem; font-size: 0.875rem; font-weight: 500; transition: border-color 0.2s, background 0.2s; cursor: pointer; }
 .market-pill:hover { border-color: rgba(0,200,255,0.3); background: rgba(0,200,255,0.04); color: var(--electric); }
+.market-pill.active { border-color: var(--electric); background: rgba(0,200,255,0.08); color: var(--electric); }
+.market-pill.coming-soon { cursor: default; }
+/* ── CRYPTO PANEL ── */
+.crypto-panel { display: none; grid-column: 1 / -1; background: var(--navy-card); border: 1px solid var(--electric); border-radius: 12px; padding: 1.5rem; margin-top: 0.5rem; animation: fadeUp 0.3s ease both; }
+.crypto-panel.open { display: block; }
+.crypto-panel-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+.crypto-panel-title { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; color: var(--electric); }
+.crypto-panel-close { background: none; border: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; padding: 0.2rem 0.5rem; border-radius: 4px; transition: color 0.2s; }
+.crypto-panel-close:hover { color: var(--white); }
+.crypto-prices { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.75rem; margin-bottom: 1.25rem; }
+.crypto-price-card { background: var(--navy-mid); border: 1px solid var(--navy-border); border-radius: 8px; padding: 0.75rem; }
+.crypto-price-label { font-size: 0.7rem; color: var(--muted); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 0.3rem; }
+.crypto-price-value { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; }
+.crypto-price-change { font-size: 0.75rem; margin-top: 0.2rem; }
+.crypto-insights { margin-bottom: 1.25rem; }
+.panel-section-title { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--electric); margin-bottom: 0.75rem; font-weight: 500; }
+.crypto-insight-item { display: flex; align-items: flex-start; gap: 0.5rem; font-size: 0.875rem; color: var(--muted); padding: 0.35rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.crypto-insight-item:last-child { border-bottom: none; }
+.crypto-news-item { display: flex; flex-direction: column; gap: 0.2rem; padding: 0.6rem 0; border-bottom: 1px solid rgba(255,255,255,0.04); text-decoration: none; }
+.crypto-news-item:last-child { border-bottom: none; }
+.crypto-news-headline { font-size: 0.875rem; color: var(--white); line-height: 1.4; transition: color 0.2s; }
+.crypto-news-item:hover .crypto-news-headline { color: var(--electric); }
+.crypto-news-meta { font-size: 0.75rem; color: var(--muted); }
+.coming-soon-tooltip { display: none; grid-column: 1 / -1; background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 12px; padding: 1.5rem; margin-top: 0.5rem; text-align: center; animation: fadeUp 0.3s ease both; }
+.coming-soon-tooltip.open { display: block; }
+.coming-soon-tooltip h3 { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 0.5rem; }
+.coming-soon-tooltip p { color: var(--muted); font-size: 0.875rem; margin-bottom: 1rem; }
 .market-icon { font-size: 1rem; }
 .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-top: 4rem; max-width: 900px; margin-left: auto; margin-right: auto; }
 .price-card { background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 12px; padding: 2.5rem 2rem; position: relative; }
@@ -492,6 +519,103 @@ async function fetchHeroCards() {
 
 fetchHeroCards();
 setInterval(fetchHeroCards, 5 * 60 * 60 * 1000);
+
+// ── CRYPTO PANEL ──
+function toggleCryptoPanel() {
+  const panel = document.getElementById('crypto-panel');
+  const pill = document.getElementById('pill-crypto');
+  const csPanel = document.getElementById('coming-soon-panel');
+  csPanel.classList.remove('open');
+  document.querySelectorAll('.market-pill').forEach(p => p.classList.remove('active'));
+  const isOpen = panel.classList.toggle('open');
+  pill.classList.toggle('active', isOpen);
+  if (isOpen) loadCryptoPanel();
+}
+
+function showComingSoon(pill, name) {
+  const panel = document.getElementById('coming-soon-panel');
+  const cryptoPanel = document.getElementById('crypto-panel');
+  const cryptoPill = document.getElementById('pill-crypto');
+  cryptoPanel.classList.remove('open');
+  cryptoPill.classList.remove('active');
+  const displayName = name === 'more' ? 'More Markets' : name;
+  document.getElementById('coming-soon-name').textContent = displayName;
+  document.querySelectorAll('.market-pill').forEach(p => p.classList.remove('active'));
+  panel.classList.add('open');
+  pill.classList.add('active');
+}
+
+async function loadCryptoPanel() {
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true');
+    const d = await r.json();
+    const coins = [
+      { id: 'btc', data: d.bitcoin },
+      { id: 'eth', data: d.ethereum },
+      { id: 'sol', data: d.solana },
+      { id: 'xrp', data: d.ripple },
+    ];
+    coins.forEach(c => {
+      const up = c.data.usd_24h_change >= 0;
+      document.getElementById(`cp-${c.id}`).textContent = '$' + c.data.usd.toLocaleString();
+      const chEl = document.getElementById(`cp-${c.id}-ch`);
+      chEl.textContent = (up ? '▲ ' : '▼ ') + Math.abs(c.data.usd_24h_change).toFixed(2) + '%';
+      chEl.className = 'crypto-price-change ' + (up ? 'up' : 'down');
+    });
+  } catch(e) {}
+
+  try {
+    const r = await fetch('https://api.coingecko.com/api/v3/global');
+    const d = await r.json();
+    const cap = d.data.total_market_cap.usd;
+    const chg = d.data.market_cap_change_percentage_24h_usd;
+    const fmt = cap >= 1e12 ? '$' + (cap/1e12).toFixed(2) + 'T' : '$' + (cap/1e9).toFixed(0) + 'B';
+    document.getElementById('cp-cap').textContent = fmt;
+    const capCh = document.getElementById('cp-cap-ch');
+    capCh.textContent = (chg >= 0 ? '▲ ' : '▼ ') + Math.abs(chg).toFixed(2) + '%';
+    capCh.className = 'crypto-price-change ' + (chg >= 0 ? 'up' : 'down');
+    const btcDom = d.data.market_cap_percentage.btc.toFixed(1);
+    const ethDom = d.data.market_cap_percentage.eth.toFixed(1);
+    const insights = [
+      `📊 Total crypto market cap: ${fmt} (${chg >= 0 ? '+' : ''}${chg.toFixed(2)}% in 24h)`,
+      `₿ Bitcoin dominance: ${btcDom}% of total market`,
+      `⟠ Ethereum dominance: ${ethDom}% of total market`,
+      `${chg >= 0 ? '📈 Market trending upward' : '📉 Market trending downward'} over the last 24 hours`,
+      `🌍 Over 10,000 cryptocurrencies tracked globally`,
+    ];
+    document.getElementById('crypto-insights-list').innerHTML = insights.map(i =>
+      `<div class="crypto-insight-item">${i}</div>`
+    ).join('');
+  } catch(e) {}
+
+  try {
+    const r = await fetch('https://api.alternative.me/fng/?limit=1');
+    const d = await r.json();
+    const val = d.data[0].value;
+    const label = d.data[0].value_classification;
+    document.getElementById('cp-fng').textContent = val + ' ' + label;
+    const fngCh = document.getElementById('cp-fng-ch');
+    const up = val > 50;
+    fngCh.textContent = up ? '▲ Bullish' : '▼ Bearish';
+    fngCh.className = 'crypto-price-change ' + (up ? 'up' : 'down');
+  } catch(e) {}
+
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/news?category=crypto&token=${FINNHUB_KEY}`);
+    const articles = await r.json();
+    const top5 = articles.slice(0, 5);
+    document.getElementById('crypto-news-list').innerHTML = top5.map(a => {
+      const date = new Date(a.datetime * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+      return `<a class="crypto-news-item" href="${a.url}" target="_blank" rel="noopener">
+        <span class="crypto-news-headline">${a.headline}</span>
+        <span class="crypto-news-meta">${a.source} · ${date}</span>
+      </a>`;
+    }).join('');
+  } catch(e) {
+    document.getElementById('crypto-news-list').innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">News unavailable right now.</div>';
+  }
+}
+
 const strip = document.querySelector('.markets-strip');
 const track = document.getElementById('ticker-track');
 let pos = 0;
@@ -628,22 +752,53 @@ strip.addEventListener('touchmove', (e) => {
   <h2 class="section-heading">Every market you can<br />imagine — and then some</h2>
   <p class="section-sub">Spot A Market covers an expansive and growing list of sectors, asset classes, and niche opportunities.</p>
   <div class="markets-grid">
-    <div class="market-pill"><span class="market-icon">₿</span> Cryptocurrency</div>
-    <div class="market-pill"><span class="market-icon">📈</span> Stocks &amp; Equities</div>
-    <div class="market-pill"><span class="market-icon">🏠</span> Real Estate</div>
-    <div class="market-pill"><span class="market-icon">🌾</span> Commodities</div>
-    <div class="market-pill"><span class="market-icon">🛢️</span> Energy</div>
-    <div class="market-pill"><span class="market-icon">💱</span> Forex</div>
-    <div class="market-pill"><span class="market-icon">🤖</span> AI &amp; Tech</div>
-    <div class="market-pill"><span class="market-icon">🏭</span> Manufacturing</div>
-    <div class="market-pill"><span class="market-icon">🛒</span> Retail &amp; Consumer</div>
-    <div class="market-pill"><span class="market-icon">💊</span> Healthcare</div>
-    <div class="market-pill"><span class="market-icon">🎮</span> Gaming</div>
-    <div class="market-pill"><span class="market-icon">🌱</span> Agriculture</div>
-    <div class="market-pill"><span class="market-icon">✈️</span> Travel &amp; Hospitality</div>
-    <div class="market-pill"><span class="market-icon">🎵</span> Entertainment</div>
-    <div class="market-pill"><span class="market-icon">🔬</span> Biotech</div>
-    <div class="market-pill"><span class="market-icon">+</span> And many more…</div>
+    <div class="market-pill" id="pill-crypto" onclick="toggleCryptoPanel()"><span class="market-icon">₿</span> Cryptocurrency</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Stocks & Equities')"><span class="market-icon">📈</span> Stocks &amp; Equities</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Real Estate')"><span class="market-icon">🏠</span> Real Estate</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Commodities')"><span class="market-icon">🌾</span> Commodities</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Energy')"><span class="market-icon">🛢️</span> Energy</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Forex')"><span class="market-icon">💱</span> Forex</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'AI & Tech')"><span class="market-icon">🤖</span> AI &amp; Tech</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Manufacturing')"><span class="market-icon">🏭</span> Manufacturing</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Retail & Consumer')"><span class="market-icon">🛒</span> Retail &amp; Consumer</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Healthcare')"><span class="market-icon">💊</span> Healthcare</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Gaming')"><span class="market-icon">🎮</span> Gaming</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Agriculture')"><span class="market-icon">🌱</span> Agriculture</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Travel & Hospitality')"><span class="market-icon">✈️</span> Travel &amp; Hospitality</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Entertainment')"><span class="market-icon">🎵</span> Entertainment</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Biotech')"><span class="market-icon">🔬</span> Biotech</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'more')"><span class="market-icon">+</span> And many more…</div>
+
+    <!-- CRYPTO PANEL -->
+    <div class="crypto-panel" id="crypto-panel">
+      <div class="crypto-panel-header">
+        <div class="crypto-panel-title">₿ Cryptocurrency Market</div>
+        <button class="crypto-panel-close" onclick="toggleCryptoPanel()">✕</button>
+      </div>
+      <div class="crypto-prices" id="crypto-panel-prices">
+        <div class="crypto-price-card"><div class="crypto-price-label">BTC</div><div class="crypto-price-value" id="cp-btc">—</div><div class="crypto-price-change" id="cp-btc-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">ETH</div><div class="crypto-price-value" id="cp-eth">—</div><div class="crypto-price-change" id="cp-eth-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">SOL</div><div class="crypto-price-value" id="cp-sol">—</div><div class="crypto-price-change" id="cp-sol-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">XRP</div><div class="crypto-price-value" id="cp-xrp">—</div><div class="crypto-price-change" id="cp-xrp-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Market Cap</div><div class="crypto-price-value" id="cp-cap">—</div><div class="crypto-price-change" id="cp-cap-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Fear & Greed</div><div class="crypto-price-value" id="cp-fng">—</div><div class="crypto-price-change" id="cp-fng-ch">—</div></div>
+      </div>
+      <div class="crypto-insights">
+        <div class="panel-section-title">💡 Market Insights</div>
+        <div id="crypto-insights-list"><div style="color:var(--muted);font-size:0.875rem;">Loading insights...</div></div>
+      </div>
+      <div>
+        <div class="panel-section-title">📰 Latest Crypto News</div>
+        <div id="crypto-news-list"><div style="color:var(--muted);font-size:0.875rem;">Loading news...</div></div>
+      </div>
+    </div>
+
+    <!-- COMING SOON PANEL -->
+    <div class="coming-soon-tooltip" id="coming-soon-panel">
+      <h3>🚀 <span id="coming-soon-name"></span> — Coming Soon</h3>
+      <p>Full market intelligence for this category is on the way. Join the waitlist to get early access.</p>
+      <a href="#waitlist" class="btn-primary" style="display:inline-block;" onclick="document.getElementById('coming-soon-panel').classList.remove('open')">Join Waitlist</a>
+    </div>
   </div>
 </section>
 
