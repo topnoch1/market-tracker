@@ -355,7 +355,7 @@ async function fetchTickerData(firstLoad) {
     const d = goldResult.value;
     items.push({ label: 'Gold', price: '$' + d.price.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2}), change: d.ch || 0 });
   } else {
-    items.push({ label: 'Gold', price: '$2,341', change: -0.8 });
+    items.push({ label: 'Gold', price: '$4,542', change: -0.8 });
   }
 
   if (silverResult.status === 'fulfilled' && silverResult.value.price) {
@@ -435,7 +435,7 @@ async function fetchHeroCards() {
     const r = await fetch('https://www.goldapi.io/api/XAU/USD', { headers: { 'x-access-token': 'goldapi-d4c25dac5cacdfe4fb57cfe4b9ce77b9-io' } });
     const d = await r.json();
     setCard('card-gold', '$' + d.price.toFixed(2), d.chp || 0);
-  } catch(e) { setCard('card-gold', '$2,341', -0.8); }
+  } catch(e) { setCard('card-gold', '$4,542', -0.8); }
 
   // Oil (WTI) — WTIC via Finnhub
   try {
@@ -444,8 +444,8 @@ async function fetchHeroCards() {
     if (d.c) {
       const change = ((d.c - d.pc) / d.pc) * 100;
       setCard('card-oil', '$' + d.c.toFixed(2), change);
-    } else { setCard('card-oil', '$59.20', -1.2); }
-  } catch(e) { setCard('card-oil', '$59.20', -1.2); }
+    } else { setCard('card-oil', '$104.50', 1.8); }
+  } catch(e) { setCard('card-oil', '$104.50', 1.8); }
 
   // Crypto Fear & Greed
   try {
