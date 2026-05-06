@@ -521,7 +521,7 @@ fetchHeroCards();
 setInterval(fetchHeroCards, 5 * 60 * 60 * 1000);
 
 // ── MARKET PANELS ──
-const livePanels = ['crypto', 'stocks', 'commodities', 'energy', 'forex'];
+const livePanels = ['crypto', 'stocks', 'commodities', 'energy', 'forex', 'pokemon'];
 const panelLoaders = {};
 
 function togglePanel(id) {
@@ -544,7 +544,7 @@ function togglePanel(id) {
     else if (id === 'stocks') loadStocksPanel();
     else if (id === 'commodities') loadCommoditiesPanel();
     else if (id === 'energy') loadEnergyPanel();
-    else if (id === 'forex') loadForexPanel();
+    else if (id === 'pokemon') loadPokemonPanel();
   }
 }
 
@@ -756,6 +756,61 @@ async function loadForexPanel() {
   } catch(e) {}
 }
 
+// POKEMON TCG
+const POKEMON_KEY = '568167f3-d070-41c4-9414-0a57c1dbdc62';
+
+async function loadPokemonPanel() {
+  // Trending cards — high value cards with market prices, sorted by market price
+  try {
+    const r = await fetch('https://api.pokemontcg.io/v2/cards?q=rarity:"Special Illustration Rare" OR rarity:"Hyper Rare"&orderBy=-cardmarket.prices.averageSellPrice&pageSize=6', {
+      headers: { 'X-Api-Key': POKEMON_KEY }
+    });
+    const d = await r.json();
+    if (d.data && d.data.length > 0) {
+      document.getElementById('pokemon-trending').innerHTML = d.data.map(card => {
+        const price = card.tcgplayer?.prices?.holofoil?.market ||
+                      card.tcgplayer?.prices?.normal?.market ||
+                      card.cardmarket?.prices?.averageSellPrice || null;
+        const priceStr = price ? `$${parseFloat(price).toFixed(2)}` : 'N/A';
+        const set = card.set?.name || '';
+        return `<div class="crypto-insight-item" style="justify-content:space-between;">
+          <span>🎴 <strong style="color:var(--white)">${card.name}</strong> <span style="font-size:0.75rem;">${set}</span></span>
+          <span style="color:var(--electric);font-weight:700;">${priceStr}</span>
+        </div>`;
+      }).join('');
+    } else {
+      document.getElementById('pokemon-trending').innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">No data available.</div>';
+    }
+  } catch(e) {
+    document.getElementById('pokemon-trending').innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Could not load cards.</div>';
+  }
+
+  // Latest sets
+  try {
+    const r = await fetch('https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate&pageSize=4', {
+      headers: { 'X-Api-Key': POKEMON_KEY }
+    });
+    const d = await r.json();
+    if (d.data) {
+      document.getElementById('pokemon-sets').innerHTML = d.data.map(set => {
+        return `<div class="crypto-insight-item" style="justify-content:space-between;">
+          <span>📦 <strong style="color:var(--white)">${set.name}</strong></span>
+          <span style="font-size:0.75rem;color:var(--muted);">${set.releaseDate} · ${set.total} cards</span>
+        </div>`;
+      }).join('');
+    }
+  } catch(e) {}
+
+  // Insights
+  setInsights('pokemon-insights', [
+    `🎴 Pokemon TCG is one of the largest collectibles markets in the world`,
+    `💰 Special Illustration Rares and Hyper Rares command the highest prices`,
+    `📈 First edition and vintage cards continue to appreciate in value`,
+    `🌍 TCGPlayer and Cardmarket are the primary marketplaces for card trading`,
+    `🔥 New set releases drive significant market activity and price movements`,
+  ]);
+}
+
 const strip = document.querySelector('.markets-strip');
 const track = document.getElementById('ticker-track');
 let pos = 0;
@@ -907,6 +962,7 @@ strip.addEventListener('touchmove', (e) => {
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Travel & Hospitality')"><span class="market-icon">✈️</span> Travel &amp; Hospitality</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Entertainment')"><span class="market-icon">🎵</span> Entertainment</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Biotech')"><span class="market-icon">🔬</span> Biotech</div>
+    <div class="market-pill" id="pill-pokemon" onclick="togglePanel('pokemon')"><span class="market-icon">🎴</span> Pokémon TCG</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'more')"><span class="market-icon">+</span> And many more…</div>
 
     <!-- CRYPTO PANEL -->
@@ -1018,6 +1074,26 @@ strip.addEventListener('touchmove', (e) => {
       <div>
         <div class="panel-section-title">📰 Latest Forex News</div>
         <div id="forex-news-list"><div style="color:var(--muted);font-size:0.875rem;">Loading news...</div></div>
+      </div>
+    </div>
+
+    <!-- POKEMON PANEL -->
+    <div class="crypto-panel" id="panel-pokemon">
+      <div class="crypto-panel-header">
+        <div class="crypto-panel-title">🎴 Pokémon TCG Market</div>
+        <button class="crypto-panel-close" onclick="togglePanel('pokemon')">✕</button>
+      </div>
+      <div class="crypto-insights" style="margin-bottom:1.25rem;">
+        <div class="panel-section-title">🔥 Trending Cards</div>
+        <div id="pokemon-trending"><div style="color:var(--muted);font-size:0.875rem;">Loading trending cards...</div></div>
+      </div>
+      <div class="crypto-insights">
+        <div class="panel-section-title">💡 Market Insights</div>
+        <div id="pokemon-insights"><div style="color:var(--muted);font-size:0.875rem;">Loading insights...</div></div>
+      </div>
+      <div>
+        <div class="panel-section-title">📦 Latest Sets</div>
+        <div id="pokemon-sets"><div style="color:var(--muted);font-size:0.875rem;">Loading sets...</div></div>
       </div>
     </div>
 
