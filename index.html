@@ -769,24 +769,63 @@ async function searchPokemon() {
     });
     const d = await r.json();
     if (d.data && d.data.length > 0) {
-      listEl.innerHTML = d.data.map(card => {
-        const price = card.tcgplayer?.prices?.holofoil?.market ||
-                      card.tcgplayer?.prices?.normal?.market ||
-                      card.tcgplayer?.prices?.['1stEditionHolofoil']?.market ||
-                      card.cardmarket?.prices?.averageSellPrice || null;
-        const priceStr = price ? `$${parseFloat(price).toFixed(2)}` : 'N/A';
+      listEl.innerHTML = d.data.map((card, i) => {
+        const tcg = card.tcgplayer?.prices || {};
+        const cm = card.cardmarket?.prices || {};
+        const mainPrice = tcg.holofoil?.market || tcg.normal?.market || tcg['1stEditionHolofoil']?.market || cm.averageSellPrice || null;
+        const priceStr = mainPrice ? `$${parseFloat(mainPrice).toFixed(2)}` : 'N/A';
         const set = card.set?.name || '';
         const rarity = card.rarity || '';
         const img = card.images?.small || '';
-        return `<div class="crypto-insight-item" style="justify-content:space-between;align-items:center;gap:1rem;">
-          <div style="display:flex;align-items:center;gap:0.75rem;">
-            ${img ? `<img src="${img}" alt="${card.name}" style="height:48px;border-radius:4px;">` : ''}
-            <div>
-              <div style="color:var(--white);font-weight:600;font-size:0.875rem;">${card.name}</div>
-              <div style="color:var(--muted);font-size:0.75rem;">${set} · ${rarity}</div>
+        const cardId = `pokemon-card-${i}`;
+
+        // Build price tiers
+        const tiers = [];
+        if (tcg.normal?.market) tiers.push({ label: 'Normal', price: tcg.normal.market, low: tcg.normal.low, high: tcg.normal.high });
+        if (tcg.holofoil?.market) tiers.push({ label: 'Holofoil', price: tcg.holofoil.market, low: tcg.holofoil.low, high: tcg.holofoil.high });
+        if (tcg.reverseHolofoil?.market) tiers.push({ label: 'Reverse Holo', price: tcg.reverseHolofoil.market, low: tcg.reverseHolofoil.low, high: tcg.reverseHolofoil.high });
+        if (tcg['1stEditionHolofoil']?.market) tiers.push({ label: '1st Ed. Holo', price: tcg['1stEditionHolofoil'].market, low: tcg['1stEditionHolofoil'].low, high: tcg['1stEditionHolofoil'].high });
+        if (tcg['1stEditionNormal']?.market) tiers.push({ label: '1st Ed. Normal', price: tcg['1stEditionNormal'].market, low: tcg['1stEditionNormal'].low, high: tcg['1stEditionNormal'].high });
+
+        const ebayRawUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(card.name + ' ' + set + ' pokemon card')}&LH_Sold=1&LH_Complete=1`;
+        const ebayGradedUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(card.name + ' ' + set + ' pokemon PSA BGS graded')}&LH_Sold=1&LH_Complete=1`;
+        const tcgUrl = card.tcgplayer?.url || `https://www.tcgplayer.com/search/pokemon/product?productLineName=pokemon&q=${encodeURIComponent(card.name)}`;
+
+        const tiersHTML = tiers.length > 0 ? `
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem;margin:1rem 0;">
+            ${tiers.map(t => `
+              <div style="background:var(--navy);border:1px solid var(--navy-border);border-radius:6px;padding:0.6rem 0.8rem;">
+                <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">${t.label}</div>
+                <div style="font-size:1rem;font-weight:700;color:var(--electric);">$${parseFloat(t.price).toFixed(2)}</div>
+                <div style="font-size:0.7rem;color:var(--muted);">Low: $${parseFloat(t.low||0).toFixed(2)} · High: $${parseFloat(t.high||0).toFixed(2)}</div>
+              </div>
+            `).join('')}
+          </div>
+        ` : '<div style="color:var(--muted);font-size:0.8rem;margin:0.75rem 0;">No price tiers available for this card.</div>';
+
+        return `
+        <div style="border:1px solid var(--navy-border);border-radius:8px;overflow:hidden;margin-bottom:0.5rem;">
+          <div onclick="togglePokemonCard('${cardId}')" style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem;cursor:pointer;gap:1rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,200,255,0.04)'" onmouseout="this.style.background='transparent'">
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              ${img ? `<img src="${img}" alt="${card.name}" style="height:48px;border-radius:4px;">` : ''}
+              <div>
+                <div style="color:var(--white);font-weight:600;font-size:0.875rem;">${card.name}</div>
+                <div style="color:var(--muted);font-size:0.75rem;">${set} · ${rarity}</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.75rem;">
+              <span style="color:var(--electric);font-weight:700;font-size:1rem;white-space:nowrap;">${priceStr}</span>
+              <span style="color:var(--muted);font-size:0.8rem;" id="${cardId}-arrow">▼</span>
             </div>
           </div>
-          <span style="color:var(--electric);font-weight:700;font-size:1rem;white-space:nowrap;">${priceStr}</span>
+          <div id="${cardId}" style="display:none;padding:0 0.75rem 0.75rem;">
+            ${tiersHTML}
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;">
+              <a href="${ebayRawUrl}" target="_blank" rel="noopener" class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.9rem;">📦 Raw Last Sales</a>
+              <a href="${ebayGradedUrl}" target="_blank" rel="noopener" class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.9rem;">🏆 Graded Last Sales</a>
+              <a href="${tcgUrl}" target="_blank" rel="noopener" class="btn-primary" style="font-size:0.8rem;padding:0.4rem 0.9rem;">🛒 Buy on TCGPlayer</a>
+            </div>
+          </div>
         </div>`;
       }).join('');
     } else {
@@ -795,6 +834,14 @@ async function searchPokemon() {
   } catch(e) {
     listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Search failed. Please try again.</div>';
   }
+}
+
+function togglePokemonCard(id) {
+  const el = document.getElementById(id);
+  const arrow = document.getElementById(id + '-arrow');
+  const isOpen = el.style.display === 'block';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
 }
 
 // POKEMON TCG
