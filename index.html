@@ -929,7 +929,7 @@ async function loadSetCards(setId, setName) {
       headers: { 'X-Api-Key': POKEMON_KEY }
     });
     const d1 = await r1.json();
-    const totalCount = d1.totalCount || d1.data.length;
+    const totalCount = d1.totalCount; // use API totalCount not set.total
     const totalPages = Math.ceil(totalCount / 50);
 
     // Show first page immediately
