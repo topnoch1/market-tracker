@@ -921,43 +921,48 @@ async function loadSetCards(setId, setName) {
   const listEl = document.getElementById('pokemon-set-cards-list');
   document.getElementById('pokemon-set-title').textContent = setName;
   setCardsEl.style.display = 'block';
-  listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Loading cards...</div>';
-  try {
-    const r = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=50`, {
-      headers: { 'X-Api-Key': POKEMON_KEY }
-    });
-    const d = await r.json();
-    if (d.data && d.data.length > 0) {
-      const totalCount = d.totalCount || d.data.length;
-      listEl.innerHTML = d.data.map((card, i) => buildCardHTML(card, i)).join('');
-      if (totalCount > 50) {
-        listEl.innerHTML += `<button onclick="loadMoreSetCards('${setId}', 2)" id="load-more-btn" class="btn-secondary" style="width:100%;margin-top:0.75rem;">Load More (${totalCount - 50} remaining)</button>`;
-      }
-    } else { listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">No cards found.</div>'; }
-  } catch(e) { listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Could not load cards.</div>'; }
-}
+  listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Loading all cards...</div>';
 
-async function loadMoreSetCards(setId, page) {
-  const btn = document.getElementById('load-more-btn');
-  if (btn) { btn.textContent = 'Loading...'; btn.disabled = true; }
   try {
-    const r = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=50&page=${page}`, {
+    // First fetch to get total count
+    const r1 = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=50&page=1`, {
       headers: { 'X-Api-Key': POKEMON_KEY }
     });
-    const d = await r.json();
-    if (d.data && d.data.length > 0) {
-      const listEl = document.getElementById('pokemon-set-cards-list');
-      if (btn) btn.remove();
-      const totalCount = d.totalCount || 0;
-      const loaded = page * 50;
-      d.data.forEach((card, i) => {
-        listEl.insertAdjacentHTML('beforeend', buildCardHTML(card, i + loaded));
-      });
-      if (totalCount > loaded) {
-        listEl.insertAdjacentHTML('beforeend', `<button onclick="loadMoreSetCards('${setId}', ${page + 1})" id="load-more-btn" class="btn-secondary" style="width:100%;margin-top:0.75rem;">Load More (${totalCount - loaded} remaining)</button>`);
+    const d1 = await r1.json();
+    const totalCount = d1.totalCount || d1.data.length;
+    const totalPages = Math.ceil(totalCount / 50);
+
+    // Show first page immediately
+    listEl.innerHTML = d1.data.map((card, i) => buildCardHTML(card, i)).join('');
+
+    if (totalPages > 1) {
+      listEl.innerHTML += `<div id="pokemon-load-progress" style="color:var(--muted);font-size:0.8rem;text-align:center;padding:0.75rem;">Loading remaining ${totalCount - 50} cards...</div>`;
+
+      // Fetch all remaining pages
+      const pagePromises = [];
+      for (let page = 2; page <= totalPages; page++) {
+        pagePromises.push(
+          fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=50&page=${page}`, {
+            headers: { 'X-Api-Key': POKEMON_KEY }
+          }).then(r => r.json())
+        );
       }
+
+      const results = await Promise.all(pagePromises);
+      const progress = document.getElementById('pokemon-load-progress');
+      if (progress) progress.remove();
+
+      results.forEach((d, pi) => {
+        if (d.data) {
+          d.data.forEach((card, i) => {
+            listEl.insertAdjacentHTML('beforeend', buildCardHTML(card, (pi + 1) * 50 + i));
+          });
+        }
+      });
     }
-  } catch(e) { if (btn) { btn.textContent = 'Load More'; btn.disabled = false; } }
+  } catch(e) {
+    listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Could not load cards.</div>';
+  }
 }
 
 function closePokemonSetCards() {
