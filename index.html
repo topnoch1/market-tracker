@@ -923,14 +923,41 @@ async function loadSetCards(setId, setName) {
   setCardsEl.style.display = 'block';
   listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Loading cards...</div>';
   try {
-    const r = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=20`, {
+    const r = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=50`, {
       headers: { 'X-Api-Key': POKEMON_KEY }
     });
     const d = await r.json();
     if (d.data && d.data.length > 0) {
+      const totalCount = d.totalCount || d.data.length;
       listEl.innerHTML = d.data.map((card, i) => buildCardHTML(card, i)).join('');
+      if (totalCount > 50) {
+        listEl.innerHTML += `<button onclick="loadMoreSetCards('${setId}', 2)" id="load-more-btn" class="btn-secondary" style="width:100%;margin-top:0.75rem;">Load More (${totalCount - 50} remaining)</button>`;
+      }
     } else { listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">No cards found.</div>'; }
   } catch(e) { listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Could not load cards.</div>'; }
+}
+
+async function loadMoreSetCards(setId, page) {
+  const btn = document.getElementById('load-more-btn');
+  if (btn) { btn.textContent = 'Loading...'; btn.disabled = true; }
+  try {
+    const r = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=50&page=${page}`, {
+      headers: { 'X-Api-Key': POKEMON_KEY }
+    });
+    const d = await r.json();
+    if (d.data && d.data.length > 0) {
+      const listEl = document.getElementById('pokemon-set-cards-list');
+      if (btn) btn.remove();
+      const totalCount = d.totalCount || 0;
+      const loaded = page * 50;
+      d.data.forEach((card, i) => {
+        listEl.insertAdjacentHTML('beforeend', buildCardHTML(card, i + loaded));
+      });
+      if (totalCount > loaded) {
+        listEl.insertAdjacentHTML('beforeend', `<button onclick="loadMoreSetCards('${setId}', ${page + 1})" id="load-more-btn" class="btn-secondary" style="width:100%;margin-top:0.75rem;">Load More (${totalCount - loaded} remaining)</button>`);
+      }
+    }
+  } catch(e) { if (btn) { btn.textContent = 'Load More'; btn.disabled = false; } }
 }
 
 function closePokemonSetCards() {
