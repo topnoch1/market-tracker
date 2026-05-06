@@ -1011,15 +1011,14 @@ function loadGradingGuide() {
 }
 
 // ── NEWS SECTION ──
+const NEWSDATA_KEY = 'pub_7f07c6667de74d2d8a8c6a6a01f2e3c3';
 const newsKeywords = {
   metals: ['gold', 'silver', 'platinum', 'palladium', 'precious metal', 'XAU', 'XAG', 'bullion'],
   energy: ['oil', 'crude', 'natural gas', 'energy', 'opec', 'petroleum', 'gasoline', 'wti', 'brent'],
   fed: ['federal reserve', 'fed', 'interest rate', 'inflation', 'cpi', 'ppi', 'gdp', 'powell', 'fomc', 'monetary policy', 'rate hike', 'rate cut'],
-  housing: ['housing', 'real estate', 'mortgage', 'home sales', 'home price', 'property', 'redfin', 'zillow', 'rent'],
 };
 
 let currentNewsTab = 'general';
-let newsRefreshTimer = null;
 
 async function switchNewsTab(tab) {
   currentNewsTab = tab;
@@ -1033,21 +1032,39 @@ async function loadNews(tab) {
   feed.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Loading news...</div>';
 
   try {
-    let category = 'general';
-    if (tab === 'crypto') category = 'crypto';
-    else if (tab === 'forex') category = 'forex';
-    else if (tab === 'merger') category = 'merger';
+    let articles = [];
 
-    const r = await fetch(`https://finnhub.io/api/v1/news?category=${category}&token=${FINNHUB_KEY}`);
-    let articles = await r.json();
+    if (tab === 'housing') {
+      // Use Newsdata.io for housing news
+      const r = await fetch(`https://newsdata.io/api/1/news?apikey=${NEWSDATA_KEY}&q=real+estate+OR+housing+market+OR+mortgage+rates&language=en&category=business`);
+      const d = await r.json();
+      if (d.results && d.results.length > 0) {
+        articles = d.results.map(a => ({
+          headline: a.title,
+          summary: a.description,
+          url: a.link,
+          source: a.source_id,
+          datetime: new Date(a.pubDate).getTime() / 1000
+        }));
+      }
+    } else {
+      // Use Finnhub for all other tabs
+      let category = 'general';
+      if (tab === 'crypto') category = 'crypto';
+      else if (tab === 'forex') category = 'forex';
+      else if (tab === 'merger') category = 'merger';
 
-    // Filter by keywords for specific tabs
-    if (['metals', 'energy', 'fed', 'housing'].includes(tab)) {
-      const keywords = newsKeywords[tab];
-      articles = articles.filter(a => {
-        const text = (a.headline + ' ' + a.summary).toLowerCase();
-        return keywords.some(kw => text.includes(kw));
-      });
+      const r = await fetch(`https://finnhub.io/api/v1/news?category=${category}&token=${FINNHUB_KEY}`);
+      articles = await r.json();
+
+      // Filter by keywords for specific tabs
+      if (['metals', 'energy', 'fed'].includes(tab)) {
+        const keywords = newsKeywords[tab];
+        articles = articles.filter(a => {
+          const text = (a.headline + ' ' + (a.summary || '')).toLowerCase();
+          return keywords.some(kw => text.includes(kw));
+        });
+      }
     }
 
     if (!articles || articles.length === 0) {
