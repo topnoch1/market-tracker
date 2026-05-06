@@ -173,6 +173,9 @@ section { position: relative; z-index: 1; padding: 6rem 5%; }
 .coming-soon-tooltip.open { display: block; }
 .coming-soon-tooltip h3 { font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 0.5rem; }
 .coming-soon-tooltip p { color: var(--muted); font-size: 0.875rem; margin-bottom: 1rem; }
+.pokemon-tab { background: var(--navy-mid); border: 1px solid var(--navy-border); border-radius: 6px; padding: 0.4rem 0.9rem; font-size: 0.8rem; font-family: var(--font-body); color: var(--muted); cursor: pointer; transition: all 0.2s; }
+.pokemon-tab:hover { border-color: var(--electric); color: var(--white); }
+.pokemon-tab.active { background: var(--electric); color: var(--navy); border-color: var(--electric); font-weight: 700; }
 .market-icon { font-size: 1rem; }
 .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; margin-top: 4rem; max-width: 900px; margin-left: auto; margin-right: auto; }
 .price-card { background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 12px; padding: 2.5rem 2rem; position: relative; }
@@ -759,89 +762,24 @@ async function loadForexPanel() {
 async function searchPokemon() {
   const input = document.getElementById('pokemon-search-input').value.trim();
   if (!input) return;
+  const rarity = document.getElementById('pokemon-rarity-filter').value;
+  const sort = document.getElementById('pokemon-sort-filter').value;
   const resultsEl = document.getElementById('pokemon-search-results');
   const listEl = document.getElementById('pokemon-search-list');
   resultsEl.style.display = 'block';
   listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Searching...</div>';
-
-  // Split input into name and optional number
   const parts = input.match(/^(.+?)\s+(\d+[\/\w]*)$/);
-  let queryStr;
-  if (parts) {
-    const name = parts[1].trim();
-    const number = parts[2].trim();
-    queryStr = `name:"${name}" number:${number}`;
-  } else {
-    queryStr = `name:"${input}"`;
-  }
-
+  let queryStr = parts ? `name:"${parts[1].trim()}" number:${parts[2].trim()}` : `name:"${input}"`;
+  if (rarity) queryStr += ` rarity:"${rarity}"`;
   try {
-    const r = await fetch(`https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(queryStr)}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=10`, {
+    const r = await fetch(`https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(queryStr)}&orderBy=${sort}&pageSize=10`, {
       headers: { 'X-Api-Key': POKEMON_KEY }
     });
     const d = await r.json();
     if (d.data && d.data.length > 0) {
-      listEl.innerHTML = d.data.map((card, i) => {
-        const tcg = card.tcgplayer?.prices || {};
-        const cm = card.cardmarket?.prices || {};
-        const mainPrice = tcg.holofoil?.market || tcg.normal?.market || tcg['1stEditionHolofoil']?.market || cm.averageSellPrice || null;
-        const priceStr = mainPrice ? `$${parseFloat(mainPrice).toFixed(2)}` : 'N/A';
-        const set = card.set?.name || '';
-        const rarity = card.rarity || '';
-        const img = card.images?.small || '';
-        const cardNum = card.number ? `#${card.number}/${card.set?.printedTotal || '?'}` : '';
-        const cardId = `pokemon-card-${i}`;
-
-        const tiers = [];
-        if (tcg.normal?.market) tiers.push({ label: 'Normal', price: tcg.normal.market, low: tcg.normal.low, high: tcg.normal.high });
-        if (tcg.holofoil?.market) tiers.push({ label: 'Holofoil', price: tcg.holofoil.market, low: tcg.holofoil.low, high: tcg.holofoil.high });
-        if (tcg.reverseHolofoil?.market) tiers.push({ label: 'Reverse Holo', price: tcg.reverseHolofoil.market, low: tcg.reverseHolofoil.low, high: tcg.reverseHolofoil.high });
-        if (tcg['1stEditionHolofoil']?.market) tiers.push({ label: '1st Ed. Holo', price: tcg['1stEditionHolofoil'].market, low: tcg['1stEditionHolofoil'].low, high: tcg['1stEditionHolofoil'].high });
-        if (tcg['1stEditionNormal']?.market) tiers.push({ label: '1st Ed. Normal', price: tcg['1stEditionNormal'].market, low: tcg['1stEditionNormal'].low, high: tcg['1stEditionNormal'].high });
-
-        const ebayRawUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(card.name + ' ' + set + ' pokemon card')}&LH_Sold=1&LH_Complete=1`;
-        const ebayGradedUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(card.name + ' ' + set + ' pokemon PSA BGS graded')}&LH_Sold=1&LH_Complete=1`;
-        const tcgUrl = card.tcgplayer?.url || `https://www.tcgplayer.com/search/pokemon/product?productLineName=pokemon&q=${encodeURIComponent(card.name)}`;
-
-        const tiersHTML = tiers.length > 0 ? `
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:0.5rem;margin:1rem 0;">
-            ${tiers.map(t => `
-              <div style="background:var(--navy);border:1px solid var(--navy-border);border-radius:6px;padding:0.6rem 0.8rem;">
-                <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">${t.label}</div>
-                <div style="font-size:1rem;font-weight:700;color:var(--electric);">$${parseFloat(t.price).toFixed(2)}</div>
-                <div style="font-size:0.7rem;color:var(--muted);">Low: $${parseFloat(t.low||0).toFixed(2)} · High: $${parseFloat(t.high||0).toFixed(2)}</div>
-              </div>
-            `).join('')}
-          </div>
-        ` : '<div style="color:var(--muted);font-size:0.8rem;margin:0.75rem 0;">No price tiers available.</div>';
-
-        return `
-        <div style="border:1px solid var(--navy-border);border-radius:8px;overflow:hidden;margin-bottom:0.5rem;">
-          <div onclick="togglePokemonCard('${cardId}')" style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem;cursor:pointer;gap:1rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,200,255,0.04)'" onmouseout="this.style.background='transparent'">
-            <div style="display:flex;align-items:center;gap:0.75rem;">
-              ${img ? `<img src="${img}" alt="${card.name}" style="height:48px;border-radius:4px;">` : ''}
-              <div>
-                <div style="color:var(--white);font-weight:600;font-size:0.875rem;">${card.name} <span style="color:var(--muted);font-size:0.75rem;">${cardNum}</span></div>
-                <div style="color:var(--muted);font-size:0.75rem;">${set} · ${rarity}</div>
-              </div>
-            </div>
-            <div style="display:flex;align-items:center;gap:0.75rem;">
-              <span style="color:var(--electric);font-weight:700;font-size:1rem;white-space:nowrap;">${priceStr}</span>
-              <span style="color:var(--muted);font-size:0.8rem;" id="${cardId}-arrow">▼</span>
-            </div>
-          </div>
-          <div id="${cardId}" style="display:none;padding:0 0.75rem 0.75rem;">
-            ${tiersHTML}
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;">
-              <a href="${ebayRawUrl}" target="_blank" rel="noopener" class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.9rem;">📦 Raw Last Sales</a>
-              <a href="${ebayGradedUrl}" target="_blank" rel="noopener" class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.9rem;">🏆 Graded Last Sales</a>
-              <a href="${tcgUrl}" target="_blank" rel="noopener" class="btn-primary" style="font-size:0.8rem;padding:0.4rem 0.9rem;">🛒 Buy on TCGPlayer</a>
-            </div>
-          </div>
-        </div>`;
-      }).join('');
+      listEl.innerHTML = d.data.map((card, i) => buildCardHTML(card, i)).join('');
     } else {
-      listEl.innerHTML = `<div style="color:var(--muted);font-size:0.875rem;">No cards found for "${input}". Try searching by name or name + number (e.g. "Charizard 4").</div>`;
+      listEl.innerHTML = `<div style="color:var(--muted);font-size:0.875rem;">No cards found for "${input}". Try a different name or remove filters.</div>`;
     }
   } catch(e) {
     listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Search failed. Please try again.</div>';
@@ -859,56 +797,175 @@ function togglePokemonCard(id) {
 // POKEMON TCG
 const POKEMON_KEY = '568167f3-d070-41c4-9414-0a57c1dbdc62';
 
+function switchPokemonTab(tab) {
+  ['search','trending','sets','guide'].forEach(t => {
+    document.getElementById(`pokemon-tab-${t}`).style.display = t === tab ? 'block' : 'none';
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+  });
+  if (tab === 'trending' && !document.getElementById('pokemon-trending').dataset.loaded) loadPokemonTrending();
+  if (tab === 'sets' && !document.getElementById('pokemon-sets-list').dataset.loaded) loadPokemonSets();
+  if (tab === 'guide') loadGradingGuide();
+}
+
 async function loadPokemonPanel() {
-  // Trending cards — high value cards with market prices, sorted by market price
+  loadPokemonTrending();
+  loadPokemonSets();
+  loadGradingGuide();
+}
+
+function buildCardHTML(card, i) {
+  const tcg = card.tcgplayer?.prices || {};
+  const cm = card.cardmarket?.prices || {};
+  const mainPrice = tcg.holofoil?.market || tcg.normal?.market || tcg['1stEditionHolofoil']?.market || cm.averageSellPrice || null;
+  const priceStr = mainPrice ? `$${parseFloat(mainPrice).toFixed(2)}` : 'N/A';
+  const set = card.set?.name || '';
+  const rarity = card.rarity || '';
+  const img = card.images?.small || '';
+  const cardNum = card.number ? `#${card.number}/${card.set?.printedTotal || '?'}` : '';
+  const cardId = `pokemon-card-${Date.now()}-${i}`;
+  const tiers = [];
+  if (tcg.normal?.market) tiers.push({ label: 'Normal', price: tcg.normal.market, low: tcg.normal.low, high: tcg.normal.high });
+  if (tcg.holofoil?.market) tiers.push({ label: 'Holofoil', price: tcg.holofoil.market, low: tcg.holofoil.low, high: tcg.holofoil.high });
+  if (tcg.reverseHolofoil?.market) tiers.push({ label: 'Reverse Holo', price: tcg.reverseHolofoil.market, low: tcg.reverseHolofoil.low, high: tcg.reverseHolofoil.high });
+  if (tcg['1stEditionHolofoil']?.market) tiers.push({ label: '1st Ed. Holo', price: tcg['1stEditionHolofoil'].market, low: tcg['1stEditionHolofoil'].low, high: tcg['1stEditionHolofoil'].high });
+  if (tcg['1stEditionNormal']?.market) tiers.push({ label: '1st Ed. Normal', price: tcg['1stEditionNormal'].market, low: tcg['1stEditionNormal'].low, high: tcg['1stEditionNormal'].high });
+  const ebayRaw = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(card.name+' '+set+' pokemon card')}&LH_Sold=1&LH_Complete=1`;
+  const ebayGraded = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(card.name+' '+set+' pokemon PSA BGS graded')}&LH_Sold=1&LH_Complete=1`;
+  const tcgUrl = card.tcgplayer?.url || `https://www.tcgplayer.com/search/pokemon/product?productLineName=pokemon&q=${encodeURIComponent(card.name)}`;
+  const tiersHTML = tiers.length > 0 ? `
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:0.5rem;margin:1rem 0;">
+      ${tiers.map(t => `
+        <div style="background:var(--navy);border:1px solid var(--navy-border);border-radius:6px;padding:0.6rem 0.8rem;">
+          <div style="font-size:0.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;">${t.label}</div>
+          <div style="font-size:1rem;font-weight:700;color:var(--electric);">$${parseFloat(t.price).toFixed(2)}</div>
+          <div style="font-size:0.7rem;color:var(--muted);">Low: $${parseFloat(t.low||0).toFixed(2)} High: $${parseFloat(t.high||0).toFixed(2)}</div>
+        </div>
+      `).join('')}
+    </div>` : '<div style="color:var(--muted);font-size:0.8rem;margin:0.75rem 0;">No price tiers available.</div>';
+  return `
+  <div style="border:1px solid var(--navy-border);border-radius:8px;overflow:hidden;margin-bottom:0.5rem;">
+    <div onclick="togglePokemonCard('${cardId}')" style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem;cursor:pointer;gap:1rem;transition:background 0.2s;" onmouseover="this.style.background='rgba(0,200,255,0.04)'" onmouseout="this.style.background='transparent'">
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        ${img ? `<img src="${img}" alt="${card.name}" style="height:48px;border-radius:4px;">` : ''}
+        <div>
+          <div style="color:var(--white);font-weight:600;font-size:0.875rem;">${card.name} <span style="color:var(--muted);font-size:0.75rem;">${cardNum}</span></div>
+          <div style="color:var(--muted);font-size:0.75rem;">${set} ${rarity}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:0.75rem;">
+        <span style="color:var(--electric);font-weight:700;font-size:1rem;white-space:nowrap;">${priceStr}</span>
+        <span style="color:var(--muted);font-size:0.8rem;" id="${cardId}-arrow">&#9660;</span>
+      </div>
+    </div>
+    <div id="${cardId}" style="display:none;padding:0 0.75rem 0.75rem;">
+      ${tiersHTML}
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:0.5rem;">
+        <a href="${ebayRaw}" target="_blank" rel="noopener" class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.9rem;">&#128230; Raw Last Sales</a>
+        <a href="${ebayGraded}" target="_blank" rel="noopener" class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.9rem;">&#127942; Graded Last Sales</a>
+        <a href="${tcgUrl}" target="_blank" rel="noopener" class="btn-primary" style="font-size:0.8rem;padding:0.4rem 0.9rem;">&#128722; Buy on TCGPlayer</a>
+      </div>
+    </div>
+  </div>`;
+}
+
+async function loadPokemonTrending() {
+  const el = document.getElementById('pokemon-trending');
+  el.dataset.loaded = '1';
   try {
-    const r = await fetch('https://api.pokemontcg.io/v2/cards?q=rarity:"Special Illustration Rare" OR rarity:"Hyper Rare"&orderBy=-cardmarket.prices.averageSellPrice&pageSize=6', {
+    const r = await fetch('https://api.pokemontcg.io/v2/cards?q=rarity:"Special Illustration Rare" OR rarity:"Hyper Rare"&orderBy=-cardmarket.prices.averageSellPrice&pageSize=8', {
       headers: { 'X-Api-Key': POKEMON_KEY }
     });
     const d = await r.json();
     if (d.data && d.data.length > 0) {
-      document.getElementById('pokemon-trending').innerHTML = d.data.map(card => {
-        const price = card.tcgplayer?.prices?.holofoil?.market ||
-                      card.tcgplayer?.prices?.normal?.market ||
-                      card.cardmarket?.prices?.averageSellPrice || null;
-        const priceStr = price ? `$${parseFloat(price).toFixed(2)}` : 'N/A';
-        const set = card.set?.name || '';
-        return `<div class="crypto-insight-item" style="justify-content:space-between;">
-          <span>🎴 <strong style="color:var(--white)">${card.name}</strong> <span style="font-size:0.75rem;">${set}</span></span>
-          <span style="color:var(--electric);font-weight:700;">${priceStr}</span>
-        </div>`;
-      }).join('');
-    } else {
-      document.getElementById('pokemon-trending').innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">No data available.</div>';
-    }
-  } catch(e) {
-    document.getElementById('pokemon-trending').innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Could not load cards.</div>';
-  }
+      el.innerHTML = d.data.map((card, i) => buildCardHTML(card, i)).join('');
+      const topPrice = d.data[0].tcgplayer?.prices?.holofoil?.market || d.data[0].cardmarket?.prices?.averageSellPrice || 0;
+      setInsights('pokemon-insights', [
+        'Pokemon TCG is one of the largest collectibles markets in the world',
+        `Top card currently valued at $${parseFloat(topPrice).toFixed(2)} on the market`,
+        'Alternate art and Special Illustration Rares command the highest premiums',
+        'TCGPlayer and Cardmarket are the two largest Pokemon card marketplaces',
+        'New set releases drive major price movement across the entire market',
+      ]);
+    } else { el.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">No data available.</div>'; }
+  } catch(e) { el.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Could not load cards.</div>'; }
+}
 
-  // Latest sets
+async function loadPokemonSets() {
+  const el = document.getElementById('pokemon-sets-list');
+  el.dataset.loaded = '1';
   try {
-    const r = await fetch('https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate&pageSize=4', {
+    const r = await fetch('https://api.pokemontcg.io/v2/sets?orderBy=-releaseDate&pageSize=20', {
       headers: { 'X-Api-Key': POKEMON_KEY }
     });
     const d = await r.json();
     if (d.data) {
-      document.getElementById('pokemon-sets').innerHTML = d.data.map(set => {
-        return `<div class="crypto-insight-item" style="justify-content:space-between;">
-          <span>📦 <strong style="color:var(--white)">${set.name}</strong></span>
-          <span style="font-size:0.75rem;color:var(--muted);">${set.releaseDate} · ${set.total} cards</span>
-        </div>`;
-      }).join('');
+      el.innerHTML = d.data.map(set => `
+        <div onclick="loadSetCards('${set.id}','${set.name.replace(/'/g, "")}')" style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0.75rem;border:1px solid var(--navy-border);border-radius:8px;margin-bottom:0.4rem;cursor:pointer;transition:all 0.2s;" onmouseover="this.style.borderColor='rgba(0,200,255,0.3)';this.style.background='rgba(0,200,255,0.04)'" onmouseout="this.style.borderColor='var(--navy-border)';this.style.background='transparent'">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            ${set.images?.symbol ? `<img src="${set.images.symbol}" style="height:24px;">` : ''}
+            <div>
+              <div style="color:var(--white);font-size:0.875rem;font-weight:600;">${set.name}</div>
+              <div style="color:var(--muted);font-size:0.75rem;">${set.releaseDate} &middot; ${set.total} cards</div>
+            </div>
+          </div>
+          <span style="color:var(--electric);font-size:0.8rem;">Browse &rarr;</span>
+        </div>
+      `).join('');
     }
-  } catch(e) {}
+  } catch(e) { el.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Could not load sets.</div>'; }
+}
 
-  // Insights
-  setInsights('pokemon-insights', [
-    `🎴 Pokemon TCG is one of the largest collectibles markets in the world`,
-    `💰 Special Illustration Rares and Hyper Rares command the highest prices`,
-    `📈 First edition and vintage cards continue to appreciate in value`,
-    `🌍 TCGPlayer and Cardmarket are the primary marketplaces for card trading`,
-    `🔥 New set releases drive significant market activity and price movements`,
-  ]);
+async function loadSetCards(setId, setName) {
+  document.getElementById('pokemon-sets-list').style.display = 'none';
+  const setCardsEl = document.getElementById('pokemon-set-cards');
+  const listEl = document.getElementById('pokemon-set-cards-list');
+  document.getElementById('pokemon-set-title').textContent = setName;
+  setCardsEl.style.display = 'block';
+  listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Loading cards...</div>';
+  try {
+    const r = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=20`, {
+      headers: { 'X-Api-Key': POKEMON_KEY }
+    });
+    const d = await r.json();
+    if (d.data && d.data.length > 0) {
+      listEl.innerHTML = d.data.map((card, i) => buildCardHTML(card, i)).join('');
+    } else { listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">No cards found.</div>'; }
+  } catch(e) { listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Could not load cards.</div>'; }
+}
+
+function closePokemonSetCards() {
+  document.getElementById('pokemon-set-cards').style.display = 'none';
+  document.getElementById('pokemon-sets-list').style.display = 'block';
+}
+
+function loadGradingGuide() {
+  const grades = [
+    { grade: 'PSA 10', label: 'Gem Mint', desc: 'Perfect card. Four sharp corners, no scratches, perfect centering. Extremely rare.', color: '#00e676' },
+    { grade: 'PSA 9', label: 'Mint', desc: 'Nearly perfect with only one minor flaw. Still very valuable.', color: '#69f0ae' },
+    { grade: 'PSA 8', label: 'NM-Mint', desc: 'Minor wear visible under close inspection. Still a clean card.', color: '#00c8ff' },
+    { grade: 'PSA 7', label: 'Near Mint', desc: 'Light wear on borders or corners. Looks clean at a glance.', color: '#7a9bbf' },
+    { grade: 'PSA 5-6', label: 'Excellent', desc: 'Noticeable wear but no major damage. Surface may show light scratching.', color: '#7a9bbf' },
+    { grade: 'PSA 1-4', label: 'Good to Poor', desc: 'Heavy wear, creases, or damage. Value significantly reduced.', color: '#ff5252' },
+  ];
+  document.getElementById('pokemon-grade-list').innerHTML = grades.map(g => `
+    <div style="display:flex;align-items:flex-start;gap:1rem;padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+      <div style="background:var(--navy-mid);border:1px solid var(--navy-border);border-radius:6px;padding:0.4rem 0.6rem;white-space:nowrap;min-width:60px;text-align:center;">
+        <div style="font-weight:700;color:${g.color};font-size:0.9rem;">${g.grade}</div>
+        <div style="font-size:0.65rem;color:var(--muted);">${g.label}</div>
+      </div>
+      <div style="font-size:0.85rem;color:var(--muted);padding-top:0.2rem;">${g.desc}</div>
+    </div>
+  `).join('');
+  const tips = [
+    'Check all four corners under bright light for wear',
+    'Centering should be close to 50/50 on both axes for PSA 10',
+    'Surface scratches on holofoil are the most common PSA 10 killer',
+    'Always sleeve cards immediately after pulling from packs',
+    'PSA 10 cards can be worth 5-10x a PSA 9 for key cards',
+  ];
+  document.getElementById('pokemon-grade-tips').innerHTML = tips.map(t =>
+    `<div class="crypto-insight-item">${t}</div>`
+  ).join('');
 }
 
 const strip = document.querySelector('.markets-strip');
@@ -1183,26 +1240,69 @@ strip.addEventListener('touchmove', (e) => {
         <div class="crypto-panel-title">🎴 Pokémon TCG Market</div>
         <button class="crypto-panel-close" onclick="togglePanel('pokemon')">✕</button>
       </div>
-      <!-- SEARCH -->
-      <div style="display:flex;gap:0.75rem;margin-bottom:1.25rem;">
-        <input id="pokemon-search-input" class="waitlist-input" type="text" placeholder="Search by name or name + number (e.g. Charizard 4, Pikachu 025)" style="flex:1;" onkeydown="if(event.key==='Enter')searchPokemon()" />
-        <button class="btn-primary" onclick="searchPokemon()" style="padding:0.6rem 1.2rem;white-space:nowrap;">Search</button>
+      <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+        <button class="pokemon-tab active" onclick="switchPokemonTab('search')" id="tab-search">🔍 Search</button>
+        <button class="pokemon-tab" onclick="switchPokemonTab('trending')" id="tab-trending">🔥 Trending</button>
+        <button class="pokemon-tab" onclick="switchPokemonTab('sets')" id="tab-sets">📦 Sets</button>
+        <button class="pokemon-tab" onclick="switchPokemonTab('guide')" id="tab-guide">📖 Grading Guide</button>
       </div>
-      <div id="pokemon-search-results" style="display:none;margin-bottom:1.25rem;">
-        <div class="panel-section-title">🔍 Search Results</div>
-        <div id="pokemon-search-list"><div style="color:var(--muted);font-size:0.875rem;">Loading...</div></div>
+      <!-- SEARCH TAB -->
+      <div id="pokemon-tab-search">
+        <div style="display:flex;gap:0.75rem;margin-bottom:0.75rem;flex-wrap:wrap;">
+          <input id="pokemon-search-input" class="waitlist-input" type="text" placeholder="Name or name + number (e.g. Charizard 4)" style="flex:1;min-width:200px;" onkeydown="if(event.key==='Enter')searchPokemon()" />
+          <button class="btn-primary" onclick="searchPokemon()" style="padding:0.6rem 1.2rem;white-space:nowrap;">Search</button>
+        </div>
+        <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap;">
+          <select id="pokemon-rarity-filter" class="waitlist-input" style="flex:1;min-width:140px;padding:0.5rem 0.75rem;">
+            <option value="">All Rarities</option>
+            <option value="Common">Common</option>
+            <option value="Uncommon">Uncommon</option>
+            <option value="Rare">Rare</option>
+            <option value="Rare Holo">Rare Holo</option>
+            <option value="Rare Ultra">Ultra Rare</option>
+            <option value="Rare Secret">Secret Rare</option>
+            <option value="Rare Rainbow">Rainbow Rare</option>
+            <option value="Special Illustration Rare">Special Illustration Rare</option>
+            <option value="Hyper Rare">Hyper Rare</option>
+          </select>
+          <select id="pokemon-sort-filter" class="waitlist-input" style="flex:1;min-width:140px;padding:0.5rem 0.75rem;">
+            <option value="-cardmarket.prices.averageSellPrice">Price: High to Low</option>
+            <option value="cardmarket.prices.averageSellPrice">Price: Low to High</option>
+            <option value="name">Name: A-Z</option>
+            <option value="-name">Name: Z-A</option>
+            <option value="-set.releaseDate">Newest First</option>
+          </select>
+        </div>
+        <div id="pokemon-search-results" style="display:none;">
+          <div class="panel-section-title">🔍 Search Results</div>
+          <div id="pokemon-search-list"><div style="color:var(--muted);font-size:0.875rem;">Loading...</div></div>
+        </div>
       </div>
-      <div class="crypto-insights" style="margin-bottom:1.25rem;">
-        <div class="panel-section-title">🔥 Trending Cards</div>
-        <div id="pokemon-trending"><div style="color:var(--muted);font-size:0.875rem;">Loading trending cards...</div></div>
+      <!-- TRENDING TAB -->
+      <div id="pokemon-tab-trending" style="display:none;">
+        <div class="panel-section-title">🔥 Highest Value Cards Right Now</div>
+        <div id="pokemon-trending"><div style="color:var(--muted);font-size:0.875rem;">Loading...</div></div>
+        <div class="panel-section-title" style="margin-top:1.25rem;">💡 Market Insights</div>
+        <div id="pokemon-insights"><div style="color:var(--muted);font-size:0.875rem;">Loading...</div></div>
       </div>
-      <div class="crypto-insights">
-        <div class="panel-section-title">💡 Market Insights</div>
-        <div id="pokemon-insights"><div style="color:var(--muted);font-size:0.875rem;">Loading insights...</div></div>
+      <!-- SETS TAB -->
+      <div id="pokemon-tab-sets" style="display:none;">
+        <div class="panel-section-title">📦 Browse Sets</div>
+        <div id="pokemon-sets-list"><div style="color:var(--muted);font-size:0.875rem;">Loading sets...</div></div>
+        <div id="pokemon-set-cards" style="display:none;margin-top:1rem;">
+          <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+            <button onclick="closePokemonSetCards()" class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.8rem;">← Back</button>
+            <div class="panel-section-title" style="margin:0;" id="pokemon-set-title">Cards</div>
+          </div>
+          <div id="pokemon-set-cards-list"><div style="color:var(--muted);font-size:0.875rem;">Loading...</div></div>
+        </div>
       </div>
-      <div>
-        <div class="panel-section-title">📦 Latest Sets</div>
-        <div id="pokemon-sets"><div style="color:var(--muted);font-size:0.875rem;">Loading sets...</div></div>
+      <!-- GRADING GUIDE TAB -->
+      <div id="pokemon-tab-guide" style="display:none;">
+        <div class="panel-section-title">📖 PSA Grading Guide</div>
+        <div id="pokemon-grade-list"></div>
+        <div class="panel-section-title" style="margin-top:1.25rem;">🔍 What to Look For</div>
+        <div id="pokemon-grade-tips"></div>
       </div>
     </div>
 
