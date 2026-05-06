@@ -756,6 +756,47 @@ async function loadForexPanel() {
   } catch(e) {}
 }
 
+async function searchPokemon() {
+  const query = document.getElementById('pokemon-search-input').value.trim();
+  if (!query) return;
+  const resultsEl = document.getElementById('pokemon-search-results');
+  const listEl = document.getElementById('pokemon-search-list');
+  resultsEl.style.display = 'block';
+  listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Searching...</div>';
+  try {
+    const r = await fetch(`https://api.pokemontcg.io/v2/cards?q=name:"${encodeURIComponent(query)}"&orderBy=-cardmarket.prices.averageSellPrice&pageSize=10`, {
+      headers: { 'X-Api-Key': POKEMON_KEY }
+    });
+    const d = await r.json();
+    if (d.data && d.data.length > 0) {
+      listEl.innerHTML = d.data.map(card => {
+        const price = card.tcgplayer?.prices?.holofoil?.market ||
+                      card.tcgplayer?.prices?.normal?.market ||
+                      card.tcgplayer?.prices?.['1stEditionHolofoil']?.market ||
+                      card.cardmarket?.prices?.averageSellPrice || null;
+        const priceStr = price ? `$${parseFloat(price).toFixed(2)}` : 'N/A';
+        const set = card.set?.name || '';
+        const rarity = card.rarity || '';
+        const img = card.images?.small || '';
+        return `<div class="crypto-insight-item" style="justify-content:space-between;align-items:center;gap:1rem;">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            ${img ? `<img src="${img}" alt="${card.name}" style="height:48px;border-radius:4px;">` : ''}
+            <div>
+              <div style="color:var(--white);font-weight:600;font-size:0.875rem;">${card.name}</div>
+              <div style="color:var(--muted);font-size:0.75rem;">${set} · ${rarity}</div>
+            </div>
+          </div>
+          <span style="color:var(--electric);font-weight:700;font-size:1rem;white-space:nowrap;">${priceStr}</span>
+        </div>`;
+      }).join('');
+    } else {
+      listEl.innerHTML = `<div style="color:var(--muted);font-size:0.875rem;">No cards found for "${query}". Try a different name.</div>`;
+    }
+  } catch(e) {
+    listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Search failed. Please try again.</div>';
+  }
+}
+
 // POKEMON TCG
 const POKEMON_KEY = '568167f3-d070-41c4-9414-0a57c1dbdc62';
 
@@ -1082,6 +1123,15 @@ strip.addEventListener('touchmove', (e) => {
       <div class="crypto-panel-header">
         <div class="crypto-panel-title">🎴 Pokémon TCG Market</div>
         <button class="crypto-panel-close" onclick="togglePanel('pokemon')">✕</button>
+      </div>
+      <!-- SEARCH -->
+      <div style="display:flex;gap:0.75rem;margin-bottom:1.25rem;">
+        <input id="pokemon-search-input" class="waitlist-input" type="text" placeholder="Search any Pokémon... (e.g. Charizard, Pikachu)" style="flex:1;" onkeydown="if(event.key==='Enter')searchPokemon()" />
+        <button class="btn-primary" onclick="searchPokemon()" style="padding:0.6rem 1.2rem;white-space:nowrap;">Search</button>
+      </div>
+      <div id="pokemon-search-results" style="display:none;margin-bottom:1.25rem;">
+        <div class="panel-section-title">🔍 Search Results</div>
+        <div id="pokemon-search-list"><div style="color:var(--muted);font-size:0.875rem;">Loading...</div></div>
       </div>
       <div class="crypto-insights" style="margin-bottom:1.25rem;">
         <div class="panel-section-title">🔥 Trending Cards</div>
