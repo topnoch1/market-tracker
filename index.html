@@ -1162,23 +1162,31 @@ async function loadSetCards(setId, setName) {
   const listEl = document.getElementById('pokemon-set-cards-list');
   document.getElementById('pokemon-set-title').textContent = setName;
   setCardsEl.style.display = 'block';
-  listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Loading all cards...</div>';
 
+  // Add search bar inside the set
+  listEl.innerHTML = `
+    <div style="display:flex;gap:0.75rem;margin-bottom:1rem;">
+      <input id="set-search-input" class="waitlist-input" type="text" placeholder="Search within ${setName}..." style="flex:1;" onkeydown="if(event.key==='Enter')searchWithinSet('${setId}')" />
+      <button class="btn-primary" onclick="searchWithinSet('${setId}')" style="padding:0.6rem 1rem;white-space:nowrap;">Search</button>
+      <button class="btn-secondary" onclick="clearSetSearch('${setId}','${setName.replace(/'/g, '')}')" style="padding:0.6rem 1rem;white-space:nowrap;">All Cards</button>
+    </div>
+    <div id="set-cards-inner"><div style="color:var(--muted);font-size:0.875rem;">Loading all cards...</div></div>
+  `;
+
+  await loadAllSetCards(setId);
+}
+
+async function loadAllSetCards(setId) {
+  const inner = document.getElementById('set-cards-inner');
+  inner.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Loading all cards...</div>';
   try {
-    // Fetch all pages simultaneously
-    let allCards = [];
-    let page = 1;
-    let totalCount = null;
-
-    // First page
     const r1 = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=250&page=1`, {
       headers: { 'X-Api-Key': POKEMON_KEY }
     });
     const d1 = await r1.json();
-    totalCount = d1.totalCount;
-    allCards = d1.data || [];
+    const totalCount = d1.totalCount;
+    let allCards = d1.data || [];
 
-    // If more pages needed, fetch them all at once
     if (totalCount > 250) {
       const totalPages = Math.ceil(totalCount / 250);
       const remaining = await Promise.all(
@@ -1192,14 +1200,40 @@ async function loadSetCards(setId, setName) {
     }
 
     if (allCards.length > 0) {
-      listEl.innerHTML = `<div style="color:var(--muted);font-size:0.75rem;margin-bottom:0.75rem;">${allCards.length} of ${totalCount} cards</div>` +
+      inner.innerHTML = `<div style="color:var(--muted);font-size:0.75rem;margin-bottom:0.75rem;">${allCards.length} cards</div>` +
         allCards.map((card, i) => buildCardHTML(card, i)).join('');
     } else {
-      listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">No cards found.</div>';
+      inner.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">No cards found.</div>';
     }
   } catch(e) {
-    listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Could not load cards.</div>';
+    inner.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Could not load cards.</div>';
   }
+}
+
+async function searchWithinSet(setId) {
+  const query = document.getElementById('set-search-input').value.trim();
+  if (!query) { await loadAllSetCards(setId); return; }
+  const inner = document.getElementById('set-cards-inner');
+  inner.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Searching...</div>';
+  try {
+    const r = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId} name:"${query}"&orderBy=-cardmarket.prices.averageSellPrice&pageSize=50`, {
+      headers: { 'X-Api-Key': POKEMON_KEY }
+    });
+    const d = await r.json();
+    if (d.data && d.data.length > 0) {
+      inner.innerHTML = `<div style="color:var(--muted);font-size:0.75rem;margin-bottom:0.75rem;">${d.data.length} results for "${query}"</div>` +
+        d.data.map((card, i) => buildCardHTML(card, i)).join('');
+    } else {
+      inner.innerHTML = `<div style="color:var(--muted);font-size:0.875rem;">No cards found for "${query}" in this set.</div>`;
+    }
+  } catch(e) {
+    inner.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Search failed. Please try again.</div>';
+  }
+}
+
+async function clearSetSearch(setId, setName) {
+  document.getElementById('set-search-input').value = '';
+  await loadAllSetCards(setId);
 }
 
 function closePokemonSetCards() {
