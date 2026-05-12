@@ -800,8 +800,51 @@ async function loadForexPanel() {
 
 // ── AUTOCOMPLETE ──
 let autocompleteTimer = null;
+let pokemonNameCache = [];
 
-async function autocomplete(input, dropdownId, setId) {
+// Preload all unique Pokemon names for instant autocomplete
+async function preloadPokemonNames() {
+  if (pokemonNameCache.length > 0) return;
+  try {
+    const r = await fetch('https://api.pokemontcg.io/v2/cards?pageSize=250&select=name&orderBy=name', {
+      headers: { 'X-Api-Key': POKEMON_KEY }
+    });
+    const d = await r.json();
+    // Get unique names
+    const names = [...new Set(d.data.map(c => c.name))].sort();
+    pokemonNameCache = names;
+  } catch(e) {}
+}
+
+// Fuzzy match — handles misspellings by checking if letters appear in order
+function fuzzyMatch(query, name) {
+  const q = query.toLowerCase();
+  const n = name.toLowerCase();
+  // Exact start match gets priority
+  if (n.startsWith(q)) return 2;
+  // Contains match
+  if (n.includes(q)) return 1;
+  // Fuzzy: check if all query letters appear in order in the name
+  let qi = 0;
+  for (let i = 0; i < n.length && qi < q.length; i++) {
+    if (n[i] === q[qi]) qi++;
+  }
+  if (qi === q.length) return 0.5;
+  // Levenshtein-lite: allow 1-2 character differences
+  if (q.length >= 4 && levenshtein(q, n.substring(0, q.length + 2)) <= 2) return 0.3;
+  return 0;
+}
+
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length: m+1}, (_, i) => Array.from({length: n+1}, (_, j) => i === 0 ? j : j === 0 ? i : 0));
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function autocomplete(input, dropdownId, setId) {
   const query = input.value.trim();
   const dropdown = document.getElementById(dropdownId);
 
@@ -811,43 +854,51 @@ async function autocomplete(input, dropdownId, setId) {
   }
 
   clearTimeout(autocompleteTimer);
-  autocompleteTimer = setTimeout(async () => {
-    try {
-      let q = `name:${query}*`;
-      if (setId) q += ` set.id:${setId}`;
+  autocompleteTimer = setTimeout(() => {
+    // Filter cached names with fuzzy matching
+    const matches = pokemonNameCache
+      .map(name => ({ name, score: fuzzyMatch(query, name) }))
+      .filter(m => m.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8);
 
-      const r = await fetch(`https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q)}&pageSize=8&orderBy=-cardmarket.prices.averageSellPrice`, {
-        headers: { 'X-Api-Key': POKEMON_KEY }
-      });
-      const d = await r.json();
-
-      if (d.data && d.data.length > 0) {
-        dropdown.style.display = 'block';
-        dropdown.innerHTML = d.data.map((card) => {
-          const price = card.tcgplayer?.prices?.holofoil?.market ||
-                        card.tcgplayer?.prices?.normal?.market ||
-                        card.cardmarket?.prices?.averageSellPrice || null;
-          const priceStr = price ? ` — $${parseFloat(price).toFixed(2)}` : '';
-          const img = card.images?.small || '';
-          const set = card.set?.name || '';
-          const safeValue = `${card.name} ${card.number}`.replace(/'/g, "\\'");
-          return `<div class="autocomplete-item" onclick="selectAutocomplete('${input.id}', '${dropdownId}', '${safeValue}')">
-            ${img ? `<img src="${img}" />` : ''}
-            <div>
-              <div style="font-weight:600;">${card.name} <span style="color:var(--muted);font-size:0.75rem;">#${card.number}</span>${priceStr}</div>
-              <div style="font-size:0.7rem;color:var(--muted);">${set}</div>
-            </div>
-          </div>`;
-        }).join('');
-      } else {
-        dropdown.style.display = 'none';
-      }
-    } catch(e) {
-      console.error('Autocomplete error:', e);
+    if (matches.length > 0) {
+      dropdown.style.display = 'block';
+      dropdown.innerHTML = matches.map(m => {
+        const safeVal = m.name.replace(/'/g, "\\'");
+        return `<div class="autocomplete-item" onclick="selectAutocomplete('${input.id}', '${dropdownId}', '${safeVal}', '${setId || ''}')">
+          <span style="font-size:1rem;">🎴</span>
+          <div style="font-weight:600;">${m.name}</div>
+        </div>`;
+      }).join('');
+    } else {
       dropdown.style.display = 'none';
     }
-  }, 350);
+  }, 150);
 }
+
+function selectAutocomplete(inputId, dropdownId, value, setId) {
+  document.getElementById(inputId).value = value;
+  document.getElementById(dropdownId).style.display = 'none';
+  if (inputId === 'pokemon-search-input') searchPokemon();
+  else if (inputId === 'set-search-input' && setId) searchWithinSet(setId);
+}
+
+function handlePokemonSearchKey(event) {
+  if (event.key === 'Enter') {
+    document.getElementById('pokemon-autocomplete').style.display = 'none';
+    searchPokemon();
+  } else if (event.key === 'Escape') {
+    document.getElementById('pokemon-autocomplete').style.display = 'none';
+  }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.autocomplete-wrap')) {
+    document.querySelectorAll('.autocomplete-dropdown').forEach(d => d.style.display = 'none');
+  }
+});
 
 function selectAutocomplete(inputId, dropdownId, value) {
   document.getElementById(inputId).value = value;
@@ -1132,6 +1183,7 @@ function switchPokemonTab(tab) {
 }
 
 async function loadPokemonPanel() {
+  preloadPokemonNames();
   loadPokemonTrending();
   loadPokemonSets();
   loadGradingGuide();
