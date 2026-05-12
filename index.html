@@ -374,10 +374,21 @@ async function fetchTickerData(firstLoad) {
     { symbol: 'TSLA', label: 'Tesla' },
     { symbol: 'META', label: 'Meta' },
     { symbol: 'GOOGL', label: 'Google' },
+    { symbol: 'DAL', label: 'Delta Air' },
+    { symbol: 'UAL', label: 'United Air' },
+    { symbol: 'AAL', label: 'American Air' },
+    { symbol: 'LUV', label: 'Southwest' },
+    { symbol: 'TLT', label: '20yr Treasury' },
+    { symbol: 'IEF', label: '10yr Treasury' },
+    { symbol: 'CORN', label: 'Corn ETF' },
+    { symbol: 'WEAT', label: 'Wheat ETF' },
+    { symbol: 'SOYB', label: 'Soybean ETF' },
+    { symbol: 'CPER', label: 'Copper ETF' },
+    { symbol: 'WOOD', label: 'Lumber ETF' },
   ];
 
   const [cryptoResult, goldResult, silverResult, forexResult, ...stockResults] = await Promise.allSettled([
-    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple&vs_currencies=usd&include_24hr_change=true').then(r => r.json()),
+    fetch('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana,ripple,cardano,avalanche-2,chainlink,polkadot,uniswap,dogecoin&vs_currencies=usd&include_24hr_change=true').then(r => r.json()),
     fetch('https://api.gold-api.com/price/XAU').then(r => r.json()),
     fetch('https://api.gold-api.com/price/XAG').then(r => r.json()),
     fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json()),
@@ -392,6 +403,12 @@ async function fetchTickerData(firstLoad) {
     items.push({ label: 'ETH', price: '$' + d.ethereum.usd.toLocaleString(), change: d.ethereum.usd_24h_change });
     items.push({ label: 'SOL', price: '$' + d.solana.usd.toLocaleString(), change: d.solana.usd_24h_change });
     items.push({ label: 'XRP', price: '$' + d.ripple.usd.toLocaleString(), change: d.ripple.usd_24h_change });
+    if (d.cardano) items.push({ label: 'ADA', price: '$' + d.cardano.usd.toLocaleString(), change: d.cardano.usd_24h_change });
+    if (d['avalanche-2']) items.push({ label: 'AVAX', price: '$' + d['avalanche-2'].usd.toLocaleString(), change: d['avalanche-2'].usd_24h_change });
+    if (d.chainlink) items.push({ label: 'LINK', price: '$' + d.chainlink.usd.toLocaleString(), change: d.chainlink.usd_24h_change });
+    if (d.polkadot) items.push({ label: 'DOT', price: '$' + d.polkadot.usd.toLocaleString(), change: d.polkadot.usd_24h_change });
+    if (d.uniswap) items.push({ label: 'UNI', price: '$' + d.uniswap.usd.toLocaleString(), change: d.uniswap.usd_24h_change });
+    if (d.dogecoin) items.push({ label: 'DOGE', price: '$' + d.dogecoin.usd.toLocaleString(), change: d.dogecoin.usd_24h_change });
   } else {
     items.push({ label: 'BTC', price: '$94,210', change: 3.4 });
     items.push({ label: 'ETH', price: '$3,120', change: 2.2 });
@@ -534,7 +551,7 @@ fetchHeroCards();
 setInterval(fetchHeroCards, 5 * 60 * 60 * 1000);
 
 // ── MARKET PANELS ──
-const livePanels = ['crypto', 'stocks', 'commodities', 'energy', 'forex', 'pokemon'];
+const livePanels = ['crypto', 'stocks', 'commodities', 'energy', 'forex', 'airlines', 'treasury', 'agriculture', 'ipo', 'pokemon'];
 const panelLoaders = {};
 
 function togglePanel(id) {
@@ -557,6 +574,11 @@ function togglePanel(id) {
     else if (id === 'stocks') loadStocksPanel();
     else if (id === 'commodities') loadCommoditiesPanel();
     else if (id === 'energy') loadEnergyPanel();
+    else if (id === 'forex') loadForexPanel();
+    else if (id === 'airlines') loadAirlinesPanel();
+    else if (id === 'treasury') loadTreasuryPanel();
+    else if (id === 'agriculture') loadAgriculturePanel();
+    else if (id === 'ipo') loadIPOPanel();
     else if (id === 'pokemon') loadPokemonPanel();
   }
 }
@@ -804,7 +826,176 @@ function togglePokemonCard(id) {
   if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
 }
 
-// POKEMON TCG
+// AIRLINES
+async function loadAirlinesPanel() {
+  const tickers = [
+    { sym: 'DAL', id: 'al-dal' }, { sym: 'UAL', id: 'al-ual' },
+    { sym: 'AAL', id: 'al-aal' }, { sym: 'LUV', id: 'al-luv' },
+  ];
+  const results = await Promise.allSettled(
+    tickers.map(t => fetch(`https://finnhub.io/api/v1/quote?symbol=${t.sym}&token=${FINNHUB_KEY}`).then(r => r.json()))
+  );
+  const changes = [];
+  results.forEach((res, i) => {
+    if (res.status === 'fulfilled' && res.value.c) {
+      const q = res.value;
+      const chg = ((q.c - q.pc) / q.pc) * 100;
+      changes.push(chg);
+      setPriceCard(tickers[i].id, '$' + q.c.toFixed(2), chg);
+    }
+  });
+  const avgChg = changes.length ? changes.reduce((a,b) => a+b,0) / changes.length : 0;
+  setInsights('airlines-insights', [
+    `✈️ Major US airlines tracked — Delta, United, American, Southwest`,
+    `${avgChg >= 0 ? '📈 Sector trending up' : '📉 Sector trending down'} ${Math.abs(avgChg).toFixed(2)}% today on average`,
+    `⛽ Fuel costs are the biggest variable affecting airline profitability`,
+    `🌍 International travel demand continues to drive revenue growth`,
+    `📊 Load factor and passenger yield are key metrics to watch`,
+  ]);
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
+    const all = await r.json();
+    const filtered = all.filter(a => {
+      const t = (a.headline + ' ' + (a.summary||'')).toLowerCase();
+      return ['airline', 'delta', 'united airlines', 'american airlines', 'southwest', 'aviation', 'flight'].some(kw => t.includes(kw));
+    });
+    setNews('airlines-news', filtered.length > 0 ? filtered : all.slice(0, 5));
+  } catch(e) {}
+}
+
+// TREASURY
+async function loadTreasuryPanel() {
+  const tickers = [
+    { sym: 'TLT', id: 'tr-tlt' },
+    { sym: 'IEF', id: 'tr-ief' },
+    { sym: 'SHY', id: 'tr-shy' },
+  ];
+  const results = await Promise.allSettled(
+    tickers.map(t => fetch(`https://finnhub.io/api/v1/quote?symbol=${t.sym}&token=${FINNHUB_KEY}`).then(r => r.json()))
+  );
+  results.forEach((res, i) => {
+    if (res.status === 'fulfilled' && res.value.c) {
+      const q = res.value;
+      const chg = ((q.c - q.pc) / q.pc) * 100;
+      setPriceCard(tickers[i].id, '$' + q.c.toFixed(2), chg);
+    }
+  });
+  setInsights('treasury-insights', [
+    `🏛️ Treasury bonds are considered the safest investment in the world`,
+    `📊 TLT tracks 20+ year US Treasury bonds — sensitive to interest rate changes`,
+    `📈 When rates fall, bond prices rise — and vice versa`,
+    `🔗 The 10yr Treasury yield is the benchmark for mortgage rates worldwide`,
+    `💡 An inverted yield curve (short > long rates) has historically predicted recessions`,
+  ]);
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
+    const all = await r.json();
+    const filtered = all.filter(a => {
+      const t = (a.headline + ' ' + (a.summary||'')).toLowerCase();
+      return ['treasury', 'bond', 'yield', 'federal reserve', 'interest rate', 'fed'].some(kw => t.includes(kw));
+    });
+    setNews('treasury-news', filtered.length > 0 ? filtered : all.slice(0, 5));
+  } catch(e) {}
+}
+
+// AGRICULTURE
+async function loadAgriculturePanel() {
+  const tickers = [
+    { sym: 'CORN', id: 'ag-corn' }, { sym: 'WEAT', id: 'ag-weat' },
+    { sym: 'SOYB', id: 'ag-soyb' }, { sym: 'CPER', id: 'ag-cper' },
+    { sym: 'WOOD', id: 'ag-wood' },
+  ];
+  const results = await Promise.allSettled(
+    tickers.map(t => fetch(`https://finnhub.io/api/v1/quote?symbol=${t.sym}&token=${FINNHUB_KEY}`).then(r => r.json()))
+  );
+  results.forEach((res, i) => {
+    if (res.status === 'fulfilled' && res.value.c) {
+      const q = res.value;
+      const chg = ((q.c - q.pc) / q.pc) * 100;
+      setPriceCard(tickers[i].id, '$' + q.c.toFixed(2), chg);
+    }
+  });
+  setInsights('agriculture-insights', [
+    `🌾 Agricultural commodities are essential building blocks of the global economy`,
+    `🌡️ Weather patterns, droughts, and floods are the primary price drivers`,
+    `🇨🇳 China is the world's largest importer of soybeans — its demand moves global prices`,
+    `🔧 Copper is known as "Dr. Copper" — its price signals global economic health`,
+    `🏗️ Lumber prices closely track the US housing market and construction activity`,
+  ]);
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
+    const all = await r.json();
+    const filtered = all.filter(a => {
+      const t = (a.headline + ' ' + (a.summary||'')).toLowerCase();
+      return ['corn', 'wheat', 'soybean', 'copper', 'lumber', 'agriculture', 'crop', 'harvest'].some(kw => t.includes(kw));
+    });
+    setNews('agriculture-news', filtered.length > 0 ? filtered : all.slice(0, 5));
+  } catch(e) {}
+}
+
+// IPO CALENDAR
+async function loadIPOPanel() {
+  try {
+    const today = new Date();
+    const from = today.toISOString().split('T')[0];
+    const to = new Date(today.setMonth(today.getMonth() + 3)).toISOString().split('T')[0];
+    const r = await fetch(`https://finnhub.io/api/v1/calendar/ipo?from=${from}&to=${to}&token=${FINNHUB_KEY}`);
+    const d = await r.json();
+    const ipos = d.ipoCalendar || [];
+
+    if (ipos.length > 0) {
+      document.getElementById('ipo-upcoming').innerHTML = ipos.slice(0, 8).map(ipo => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <div>
+            <div style="color:var(--white);font-weight:600;font-size:0.875rem;">${ipo.name || ipo.symbol}</div>
+            <div style="color:var(--muted);font-size:0.75rem;">${ipo.symbol} · ${ipo.exchange || 'TBA'} · ${ipo.date}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="color:var(--electric);font-weight:700;">${ipo.price ? '$' + ipo.price : 'TBA'}</div>
+            <div style="color:var(--muted);font-size:0.75rem;">${ipo.shares ? (ipo.shares/1e6).toFixed(1) + 'M shares' : ''}</div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      document.getElementById('ipo-upcoming').innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">No upcoming IPOs in the next 3 months.</div>';
+    }
+  } catch(e) {
+    document.getElementById('ipo-upcoming').innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Could not load IPO data.</div>';
+  }
+
+  // Recent IPOs
+  try {
+    const today = new Date();
+    const to = today.toISOString().split('T')[0];
+    const from = new Date(today.setMonth(today.getMonth() - 3)).toISOString().split('T')[0];
+    const r = await fetch(`https://finnhub.io/api/v1/calendar/ipo?from=${from}&to=${to}&token=${FINNHUB_KEY}`);
+    const d = await r.json();
+    const ipos = (d.ipoCalendar || []).reverse();
+    if (ipos.length > 0) {
+      document.getElementById('ipo-recent').innerHTML = ipos.slice(0, 8).map(ipo => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.6rem 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+          <div>
+            <div style="color:var(--white);font-weight:600;font-size:0.875rem;">${ipo.name || ipo.symbol}</div>
+            <div style="color:var(--muted);font-size:0.75rem;">${ipo.symbol} · ${ipo.exchange || 'TBA'} · ${ipo.date}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="color:var(--electric);font-weight:700;">${ipo.price ? '$' + ipo.price : 'TBA'}</div>
+          </div>
+        </div>
+      `).join('');
+    } else {
+      document.getElementById('ipo-recent').innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">No recent IPOs found.</div>';
+    }
+  } catch(e) {}
+
+  setInsights('ipo-insights', [
+    `🚀 IPOs allow companies to raise capital by selling shares to the public for the first time`,
+    `📊 IPO price is set by investment banks based on demand during the roadshow`,
+    `📈 First day "pop" is common — some IPOs jump 20-100% on day one`,
+    `⚠️ IPOs carry higher risk — companies are newly public with less historical data`,
+    `🔒 Insiders typically face a 180-day lockup period before they can sell shares`,
+  ]);
+}
 const POKEMON_KEY = '568167f3-d070-41c4-9414-0a57c1dbdc62';
 
 function switchPokemonTab(tab) {
@@ -1245,9 +1436,13 @@ strip.addEventListener('touchmove', (e) => {
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Healthcare')"><span class="market-icon">💊</span> Healthcare</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Gaming')"><span class="market-icon">🎮</span> Gaming</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Agriculture')"><span class="market-icon">🌱</span> Agriculture</div>
-    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Travel & Hospitality')"><span class="market-icon">✈️</span> Travel &amp; Hospitality</div>
+    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Travel & Hospitality')"><span class="market-icon">🏨</span> Travel &amp; Hospitality</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Entertainment')"><span class="market-icon">🎵</span> Entertainment</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Biotech')"><span class="market-icon">🔬</span> Biotech</div>
+    <div class="market-pill" id="pill-airlines" onclick="togglePanel('airlines')"><span class="market-icon">✈️</span> Airlines</div>
+    <div class="market-pill" id="pill-treasury" onclick="togglePanel('treasury')"><span class="market-icon">🏛️</span> Treasury Yields</div>
+    <div class="market-pill" id="pill-agriculture" onclick="togglePanel('agriculture')"><span class="market-icon">🌾</span> Agriculture</div>
+    <div class="market-pill" id="pill-ipo" onclick="togglePanel('ipo')"><span class="market-icon">🚀</span> IPO Calendar</div>
     <div class="market-pill" id="pill-pokemon" onclick="togglePanel('pokemon')"><span class="market-icon">🎴</span> Pokémon TCG</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'more')"><span class="market-icon">+</span> And many more…</div>
 
@@ -1435,7 +1630,91 @@ strip.addEventListener('touchmove', (e) => {
       </div>
     </div>
 
-    <!-- COMING SOON PANEL -->
+    <!-- AIRLINES PANEL -->
+    <div class="crypto-panel" id="panel-airlines">
+      <div class="crypto-panel-header">
+        <div class="crypto-panel-title">✈️ Airlines Market</div>
+        <button class="crypto-panel-close" onclick="togglePanel('airlines')">✕</button>
+      </div>
+      <div class="crypto-prices">
+        <div class="crypto-price-card"><div class="crypto-price-label">Delta (DAL)</div><div class="crypto-price-value" id="al-dal">—</div><div class="crypto-price-change" id="al-dal-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">United (UAL)</div><div class="crypto-price-value" id="al-ual">—</div><div class="crypto-price-change" id="al-ual-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">American (AAL)</div><div class="crypto-price-value" id="al-aal">—</div><div class="crypto-price-change" id="al-aal-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Southwest (LUV)</div><div class="crypto-price-value" id="al-luv">—</div><div class="crypto-price-change" id="al-luv-ch">—</div></div>
+      </div>
+      <div class="crypto-insights">
+        <div class="panel-section-title">💡 Market Insights</div>
+        <div id="airlines-insights"></div>
+      </div>
+      <div>
+        <div class="panel-section-title">📰 Latest Airlines News</div>
+        <div id="airlines-news"><div style="color:var(--muted);font-size:0.875rem;">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- TREASURY PANEL -->
+    <div class="crypto-panel" id="panel-treasury">
+      <div class="crypto-panel-header">
+        <div class="crypto-panel-title">🏛️ Treasury Yields</div>
+        <button class="crypto-panel-close" onclick="togglePanel('treasury')">✕</button>
+      </div>
+      <div class="crypto-prices">
+        <div class="crypto-price-card"><div class="crypto-price-label">20yr Treasury (TLT)</div><div class="crypto-price-value" id="tr-tlt">—</div><div class="crypto-price-change" id="tr-tlt-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">10yr Treasury (IEF)</div><div class="crypto-price-value" id="tr-ief">—</div><div class="crypto-price-change" id="tr-ief-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Short Term (SHY)</div><div class="crypto-price-value" id="tr-shy">—</div><div class="crypto-price-change" id="tr-shy-ch">—</div></div>
+      </div>
+      <div class="crypto-insights">
+        <div class="panel-section-title">💡 Market Insights</div>
+        <div id="treasury-insights"></div>
+      </div>
+      <div>
+        <div class="panel-section-title">📰 Latest Bond Market News</div>
+        <div id="treasury-news"><div style="color:var(--muted);font-size:0.875rem;">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- AGRICULTURE PANEL -->
+    <div class="crypto-panel" id="panel-agriculture">
+      <div class="crypto-panel-header">
+        <div class="crypto-panel-title">🌾 Agricultural Markets</div>
+        <button class="crypto-panel-close" onclick="togglePanel('agriculture')">✕</button>
+      </div>
+      <div class="crypto-prices">
+        <div class="crypto-price-card"><div class="crypto-price-label">Corn ETF</div><div class="crypto-price-value" id="ag-corn">—</div><div class="crypto-price-change" id="ag-corn-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Wheat ETF</div><div class="crypto-price-value" id="ag-weat">—</div><div class="crypto-price-change" id="ag-weat-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Soybean ETF</div><div class="crypto-price-value" id="ag-soyb">—</div><div class="crypto-price-change" id="ag-soyb-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Copper ETF</div><div class="crypto-price-value" id="ag-cper">—</div><div class="crypto-price-change" id="ag-cper-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Lumber ETF</div><div class="crypto-price-value" id="ag-wood">—</div><div class="crypto-price-change" id="ag-wood-ch">—</div></div>
+      </div>
+      <div class="crypto-insights">
+        <div class="panel-section-title">💡 Market Insights</div>
+        <div id="agriculture-insights"></div>
+      </div>
+      <div>
+        <div class="panel-section-title">📰 Latest Agriculture News</div>
+        <div id="agriculture-news"><div style="color:var(--muted);font-size:0.875rem;">Loading...</div></div>
+      </div>
+    </div>
+
+    <!-- IPO PANEL -->
+    <div class="crypto-panel" id="panel-ipo">
+      <div class="crypto-panel-header">
+        <div class="crypto-panel-title">🚀 IPO Calendar</div>
+        <button class="crypto-panel-close" onclick="togglePanel('ipo')">✕</button>
+      </div>
+      <div class="crypto-insights">
+        <div class="panel-section-title">📅 Upcoming IPOs</div>
+        <div id="ipo-upcoming"><div style="color:var(--muted);font-size:0.875rem;">Loading...</div></div>
+      </div>
+      <div style="margin-top:1.25rem;">
+        <div class="panel-section-title">✅ Recent IPOs</div>
+        <div id="ipo-recent"><div style="color:var(--muted);font-size:0.875rem;">Loading...</div></div>
+      </div>
+      <div style="margin-top:1.25rem;">
+        <div class="panel-section-title">💡 IPO Insights</div>
+        <div id="ipo-insights"></div>
+      </div>
+    </div>
     <div class="coming-soon-tooltip" id="coming-soon-panel">
       <h3>🚀 <span id="coming-soon-name"></span> — Coming Soon</h3>
       <p>Full market intelligence for this category is on the way. Join the waitlist to get early access.</p>
