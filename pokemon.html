@@ -213,9 +213,18 @@ function switchTab(tab) {
 // Autocomplete
 async function preloadNames() {
   if(nameCache.length>0) return;
+  // Cache names for 24 hours
+  try {
+    const cached = sessionStorage.getItem('pokemon_names');
+    const cacheTime = sessionStorage.getItem('pokemon_names_time');
+    if(cached && cacheTime && Date.now()-parseInt(cacheTime)<24*60*60*1000){
+      nameCache=JSON.parse(cached); return;
+    }
+  } catch(e){}
   try {
     const pages = await Promise.all([1,2,3,4].map(p=>fetch(`https://api.pokemontcg.io/v2/cards?pageSize=250&page=${p}&select=name&orderBy=name`,{headers:{'X-Api-Key':POKEMON_KEY}}).then(r=>r.json())));
     nameCache = [...new Set(pages.flatMap(d=>d.data?.map(c=>c.name)||[]))].sort();
+    try{sessionStorage.setItem('pokemon_names',JSON.stringify(nameCache));sessionStorage.setItem('pokemon_names_time',Date.now().toString());}catch(e){}
   } catch(e){}
 }
 

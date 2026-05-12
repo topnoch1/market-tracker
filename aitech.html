@@ -135,6 +135,11 @@ async function loadNews(){
   }catch(e){}
 }
 loadPrices();loadNews();
-setInterval(loadPrices,60000);setInterval(loadNews,3*60*1000);
+let priceInt=setInterval(loadPrices,60000);
+let newsInt=setInterval(loadNews,3*60*1000);
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){clearInterval(priceInt);clearInterval(newsInt);}
+  else{loadPrices();priceInt=setInterval(loadPrices,60000);newsInt=setInterval(loadNews,3*60*1000);}
+});
 </script>
 </div></body></html>

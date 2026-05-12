@@ -219,13 +219,26 @@ async function loadCryptoNews() {
   }
 }
 
-// Coin search
+// Coin search — cached for 24 hours in sessionStorage
 let coinList = [];
 async function loadCoinList() {
   if (coinList.length > 0) return;
+  // Check cache first
+  try {
+    const cached = sessionStorage.getItem('coingecko_coin_list');
+    const cacheTime = sessionStorage.getItem('coingecko_coin_list_time');
+    if (cached && cacheTime && Date.now() - parseInt(cacheTime) < 24*60*60*1000) {
+      coinList = JSON.parse(cached);
+      return;
+    }
+  } catch(e) {}
   try {
     const r = await fetch('https://api.coingecko.com/api/v3/coins/list');
     coinList = await r.json();
+    try {
+      sessionStorage.setItem('coingecko_coin_list', JSON.stringify(coinList));
+      sessionStorage.setItem('coingecko_coin_list_time', Date.now().toString());
+    } catch(e) {}
   } catch(e) {}
 }
 
@@ -314,8 +327,21 @@ document.addEventListener('click', e => { if (!e.target.closest('.autocomplete-w
 loadCryptoPrices();
 loadCryptoNews();
 loadCoinList();
-setInterval(loadCryptoPrices, 60000);
-setInterval(loadCryptoNews, 3*60*1000);
+
+// Pause refreshes when tab is not visible
+let cryptoPriceInterval = setInterval(loadCryptoPrices, 15*60*1000);
+let cryptoNewsInterval = setInterval(loadCryptoNews, 3*60*1000);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    clearInterval(cryptoPriceInterval);
+    clearInterval(cryptoNewsInterval);
+  } else {
+    loadCryptoPrices();
+    cryptoPriceInterval = setInterval(loadCryptoPrices, 15*60*1000);
+    cryptoNewsInterval = setInterval(loadCryptoNews, 3*60*1000);
+  }
+});
 </script>
 </div>
 </body>
