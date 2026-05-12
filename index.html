@@ -806,13 +806,14 @@ let pokemonNameCache = [];
 async function preloadPokemonNames() {
   if (pokemonNameCache.length > 0) return;
   try {
-    const r = await fetch('https://api.pokemontcg.io/v2/cards?pageSize=250&select=name&orderBy=name', {
-      headers: { 'X-Api-Key': POKEMON_KEY }
-    });
-    const d = await r.json();
-    // Get unique names
-    const names = [...new Set(d.data.map(c => c.name))].sort();
-    pokemonNameCache = names;
+    // Fetch multiple pages to get a broad set of names
+    const pages = await Promise.all([1,2,3,4].map(p =>
+      fetch(`https://api.pokemontcg.io/v2/cards?pageSize=250&page=${p}&select=name&orderBy=name`, {
+        headers: { 'X-Api-Key': POKEMON_KEY }
+      }).then(r => r.json())
+    ));
+    const allNames = pages.flatMap(d => d.data?.map(c => c.name) || []);
+    pokemonNameCache = [...new Set(allNames)].sort();
   } catch(e) {}
 }
 
@@ -848,14 +849,21 @@ function autocomplete(input, dropdownId, setId) {
   const query = input.value.trim();
   const dropdown = document.getElementById(dropdownId);
 
-  if (query.length < 2) {
+  if (query.length < 1) {
     dropdown.style.display = 'none';
+    return;
+  }
+
+  // If names not loaded yet, show loading
+  if (pokemonNameCache.length === 0) {
+    dropdown.style.display = 'block';
+    dropdown.innerHTML = '<div class="autocomplete-item" style="color:var(--muted);">Loading suggestions...</div>';
+    preloadPokemonNames().then(() => autocomplete(input, dropdownId, setId));
     return;
   }
 
   clearTimeout(autocompleteTimer);
   autocompleteTimer = setTimeout(() => {
-    // Filter cached names with fuzzy matching
     const matches = pokemonNameCache
       .map(name => ({ name, score: fuzzyMatch(query, name) }))
       .filter(m => m.score > 0)
@@ -866,15 +874,18 @@ function autocomplete(input, dropdownId, setId) {
       dropdown.style.display = 'block';
       dropdown.innerHTML = matches.map(m => {
         const safeVal = m.name.replace(/'/g, "\\'");
+        // Highlight matching part
+        const highlighted = m.name.replace(new RegExp(`(${query})`, 'gi'), '<strong style="color:var(--electric);">$1</strong>');
         return `<div class="autocomplete-item" onclick="selectAutocomplete('${input.id}', '${dropdownId}', '${safeVal}', '${setId || ''}')">
           <span style="font-size:1rem;">🎴</span>
-          <div style="font-weight:600;">${m.name}</div>
+          <div>${highlighted}</div>
         </div>`;
       }).join('');
     } else {
-      dropdown.style.display = 'none';
+      dropdown.style.display = 'block';
+      dropdown.innerHTML = `<div class="autocomplete-item" style="color:var(--muted);">No matches for "${query}"</div>`;
     }
-  }, 150);
+  }, 50);
 }
 
 function selectAutocomplete(inputId, dropdownId, value, setId) {
