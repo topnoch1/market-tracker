@@ -176,6 +176,12 @@ section { position: relative; z-index: 1; padding: 6rem 5%; }
 .pokemon-tab { background: var(--navy-mid); border: 1px solid var(--navy-border); border-radius: 6px; padding: 0.4rem 0.9rem; font-size: 0.8rem; font-family: var(--font-body); color: var(--muted); cursor: pointer; transition: all 0.2s; }
 .pokemon-tab:hover { border-color: var(--electric); color: var(--white); }
 .pokemon-tab.active { background: var(--electric); color: var(--navy); border-color: var(--electric); font-weight: 700; }
+.autocomplete-wrap { position: relative; flex: 1; min-width: 200px; }
+.autocomplete-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: var(--navy-card); border: 1px solid var(--electric); border-top: none; border-radius: 0 0 8px 8px; z-index: 999; max-height: 220px; overflow-y: auto; }
+.autocomplete-item { padding: 0.6rem 1rem; font-size: 0.875rem; color: var(--white); cursor: pointer; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid var(--navy-border); }
+.autocomplete-item:last-child { border-bottom: none; }
+.autocomplete-item:hover, .autocomplete-item.active { background: rgba(0,200,255,0.1); color: var(--electric); }
+.autocomplete-item img { height: 32px; border-radius: 3px; }
 .news-tab { background: var(--navy-card); border: 1px solid var(--navy-border); border-radius: 6px; padding: 0.5rem 1rem; font-size: 0.8rem; font-family: var(--font-body); color: var(--muted); cursor: pointer; transition: all 0.2s; white-space: nowrap; }
 .news-tab:hover { border-color: var(--electric); color: var(--white); }
 .news-tab.active { background: var(--electric); color: var(--navy); border-color: var(--electric); font-weight: 700; }
@@ -792,6 +798,79 @@ async function loadForexPanel() {
   } catch(e) {}
 }
 
+// ── AUTOCOMPLETE ──
+let autocompleteTimer = null;
+
+async function autocomplete(input, dropdownId, setId) {
+  const query = input.value.trim();
+  const dropdown = document.getElementById(dropdownId);
+
+  if (query.length < 2) {
+    dropdown.style.display = 'none';
+    return;
+  }
+
+  clearTimeout(autocompleteTimer);
+  autocompleteTimer = setTimeout(async () => {
+    try {
+      let url = `https://api.pokemontcg.io/v2/cards?q=name:"${query}*"&pageSize=8&orderBy=-cardmarket.prices.averageSellPrice`;
+      if (setId) url += ` set.id:${setId}`;
+
+      const r = await fetch(url, { headers: { 'X-Api-Key': POKEMON_KEY } });
+      const d = await r.json();
+
+      if (d.data && d.data.length > 0) {
+        dropdown.style.display = 'block';
+        dropdown.innerHTML = d.data.map((card, i) => {
+          const price = card.tcgplayer?.prices?.holofoil?.market ||
+                        card.tcgplayer?.prices?.normal?.market ||
+                        card.cardmarket?.prices?.averageSellPrice || null;
+          const priceStr = price ? ` — $${parseFloat(price).toFixed(2)}` : '';
+          const img = card.images?.small || '';
+          const set = card.set?.name || '';
+          return `<div class="autocomplete-item" onclick="selectAutocomplete('${input.id}', '${dropdownId}', '${card.name.replace(/'/g,"\\'")} ${card.number}')">
+            ${img ? `<img src="${img}" />` : ''}
+            <div>
+              <div style="font-weight:600;">${card.name} <span style="color:var(--muted);font-size:0.75rem;">#${card.number}</span>${priceStr}</div>
+              <div style="font-size:0.7rem;color:var(--muted);">${set}</div>
+            </div>
+          </div>`;
+        }).join('');
+      } else {
+        dropdown.style.display = 'none';
+      }
+    } catch(e) {
+      dropdown.style.display = 'none';
+    }
+  }, 300);
+}
+
+function selectAutocomplete(inputId, dropdownId, value) {
+  document.getElementById(inputId).value = value;
+  document.getElementById(dropdownId).style.display = 'none';
+  if (inputId === 'pokemon-search-input') searchPokemon();
+  else if (inputId === 'set-search-input') {
+    const setId = document.getElementById('set-search-input').dataset.setId;
+    if (setId) searchWithinSet(setId);
+  }
+}
+
+function handlePokemonSearchKey(event) {
+  if (event.key === 'Enter') {
+    document.getElementById('pokemon-autocomplete').style.display = 'none';
+    searchPokemon();
+  } else if (event.key === 'Escape') {
+    document.getElementById('pokemon-autocomplete').style.display = 'none';
+  }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.autocomplete-wrap')) {
+    document.querySelectorAll('.autocomplete-dropdown').forEach(d => d.style.display = 'none');
+  }
+});
+
 async function searchPokemon() {
   const input = document.getElementById('pokemon-search-input').value.trim();
   if (!input) return;
@@ -1166,7 +1245,10 @@ async function loadSetCards(setId, setName) {
   // Add search bar inside the set
   listEl.innerHTML = `
     <div style="display:flex;gap:0.75rem;margin-bottom:1rem;">
-      <input id="set-search-input" class="waitlist-input" type="text" placeholder="Search within ${setName}..." style="flex:1;" onkeydown="if(event.key==='Enter')searchWithinSet('${setId}')" />
+      <div class="autocomplete-wrap" style="flex:1;">
+        <input id="set-search-input" data-set-id="${setId}" class="waitlist-input" type="text" placeholder="Search within ${setName}..." style="width:100%;" onkeydown="if(event.key==='Enter'){document.getElementById('set-autocomplete').style.display='none';searchWithinSet('${setId}')}" oninput="autocomplete(this,'set-autocomplete','${setId}')" autocomplete="off" />
+        <div id="set-autocomplete" class="autocomplete-dropdown" style="display:none;"></div>
+      </div>
       <button class="btn-primary" onclick="searchWithinSet('${setId}')" style="padding:0.6rem 1rem;white-space:nowrap;">Search</button>
       <button class="btn-secondary" onclick="clearSetSearch('${setId}','${setName.replace(/'/g, '')}')" style="padding:0.6rem 1rem;white-space:nowrap;">All Cards</button>
     </div>
@@ -1646,7 +1728,10 @@ strip.addEventListener('touchmove', (e) => {
       <!-- SEARCH TAB -->
       <div id="pokemon-tab-search">
         <div style="display:flex;gap:0.75rem;margin-bottom:0.75rem;flex-wrap:wrap;">
-          <input id="pokemon-search-input" class="waitlist-input" type="text" placeholder="Name or name + number (e.g. Charizard 4)" style="flex:1;min-width:200px;" onkeydown="if(event.key==='Enter')searchPokemon()" />
+          <div class="autocomplete-wrap">
+            <input id="pokemon-search-input" class="waitlist-input" type="text" placeholder="Name or name + number (e.g. Charizard 4)" style="width:100%;" onkeydown="handlePokemonSearchKey(event)" oninput="autocomplete(this, 'pokemon-autocomplete', null)" autocomplete="off" />
+            <div id="pokemon-autocomplete" class="autocomplete-dropdown" style="display:none;"></div>
+          </div>
           <button class="btn-primary" onclick="searchPokemon()" style="padding:0.6rem 1.2rem;white-space:nowrap;">Search</button>
         </div>
         <div style="display:flex;gap:0.5rem;margin-bottom:1.25rem;flex-wrap:wrap;">
