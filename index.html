@@ -259,7 +259,7 @@ footer { border-top: 1px solid var(--navy-border); padding: 2rem 5%; display: fl
         <div class="screen-dot"></div>
         <div class="screen-dot"></div>
         <div class="screen-dot"></div>
-        <span class="screen-title">spotamarket.io — Dashboard</span>
+        <span class="screen-title">spotamarket.com — Dashboard</span>
       </div>
       <div class="screen-body" style="grid-template-columns: 1fr 1fr 1fr;">
         <div class="ticker-card">
@@ -551,7 +551,7 @@ fetchHeroCards();
 setInterval(fetchHeroCards, 5 * 60 * 60 * 1000);
 
 // ── MARKET PANELS ──
-const livePanels = ['crypto', 'stocks', 'commodities', 'energy', 'forex', 'airlines', 'treasury', 'agriculture', 'ipo', 'pokemon'];
+const livePanels = ['crypto', 'stocks', 'commodities', 'energy', 'forex', 'airlines', 'treasury', 'agriculture', 'ipo', 'aitech', 'pokemon'];
 const panelLoaders = {};
 
 function togglePanel(id) {
@@ -579,6 +579,7 @@ function togglePanel(id) {
     else if (id === 'treasury') loadTreasuryPanel();
     else if (id === 'agriculture') loadAgriculturePanel();
     else if (id === 'ipo') loadIPOPanel();
+    else if (id === 'aitech') loadAITechPanel();
     else if (id === 'pokemon') loadPokemonPanel();
   }
 }
@@ -996,6 +997,45 @@ async function loadIPOPanel() {
     `🔒 Insiders typically face a 180-day lockup period before they can sell shares`,
   ]);
 }
+
+// AI & TECH
+async function loadAITechPanel() {
+  const tickers = [
+    { sym: 'NVDA', id: 'ai-nvda' }, { sym: 'MSFT', id: 'ai-msft' },
+    { sym: 'GOOGL', id: 'ai-googl' }, { sym: 'META', id: 'ai-meta' },
+    { sym: 'AMD', id: 'ai-amd' }, { sym: 'AAPL', id: 'ai-aapl' },
+  ];
+  const results = await Promise.allSettled(
+    tickers.map(t => fetch(`https://finnhub.io/api/v1/quote?symbol=${t.sym}&token=${FINNHUB_KEY}`).then(r => r.json()))
+  );
+  const changes = [];
+  results.forEach((res, i) => {
+    if (res.status === 'fulfilled' && res.value.c) {
+      const q = res.value;
+      const chg = ((q.c - q.pc) / q.pc) * 100;
+      changes.push(chg);
+      setPriceCard(tickers[i].id, '$' + q.c.toFixed(2), chg);
+    }
+  });
+  const avgChg = changes.length ? changes.reduce((a,b) => a+b,0) / changes.length : 0;
+  setInsights('aitech-insights', [
+    `🤖 AI infrastructure spending continues to grow at unprecedented rates`,
+    `${avgChg >= 0 ? '📈 AI & Tech sector up' : '📉 AI & Tech sector down'} ${Math.abs(avgChg).toFixed(2)}% today on average`,
+    `⚡ NVDA dominates AI chip market with ~80% market share in data center GPUs`,
+    `🧠 Microsoft, Google and Meta are the top spenders on AI infrastructure globally`,
+    `🔮 AI is projected to add $15 trillion to the global economy by 2030`,
+  ]);
+  try {
+    const r = await fetch(`https://finnhub.io/api/v1/news?category=general&token=${FINNHUB_KEY}`);
+    const all = await r.json();
+    const filtered = all.filter(a => {
+      const t = (a.headline + ' ' + (a.summary||'')).toLowerCase();
+      return ['artificial intelligence', 'nvidia', 'microsoft', 'openai', 'chatgpt', 'machine learning', 'semiconductor', 'chip', ' ai '].some(kw => t.includes(kw));
+    });
+    setNews('aitech-news', filtered.length > 0 ? filtered : all.slice(0, 5));
+  } catch(e) {}
+}
+
 const POKEMON_KEY = '568167f3-d070-41c4-9414-0a57c1dbdc62';
 
 function switchPokemonTab(tab) {
@@ -1125,41 +1165,37 @@ async function loadSetCards(setId, setName) {
   listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Loading all cards...</div>';
 
   try {
-    // First fetch to get total count
-    const r1 = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=50&page=1`, {
+    // Fetch all pages simultaneously
+    let allCards = [];
+    let page = 1;
+    let totalCount = null;
+
+    // First page
+    const r1 = await fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=250&page=1`, {
       headers: { 'X-Api-Key': POKEMON_KEY }
     });
     const d1 = await r1.json();
-    const totalCount = d1.totalCount; // use API totalCount not set.total
-    const totalPages = Math.ceil(totalCount / 50);
+    totalCount = d1.totalCount;
+    allCards = d1.data || [];
 
-    // Show first page immediately
-    listEl.innerHTML = d1.data.map((card, i) => buildCardHTML(card, i)).join('');
-
-    if (totalPages > 1) {
-      listEl.innerHTML += `<div id="pokemon-load-progress" style="color:var(--muted);font-size:0.8rem;text-align:center;padding:0.75rem;">Loading remaining ${totalCount - 50} cards...</div>`;
-
-      // Fetch all remaining pages
-      const pagePromises = [];
-      for (let page = 2; page <= totalPages; page++) {
-        pagePromises.push(
-          fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=50&page=${page}`, {
+    // If more pages needed, fetch them all at once
+    if (totalCount > 250) {
+      const totalPages = Math.ceil(totalCount / 250);
+      const remaining = await Promise.all(
+        Array.from({ length: totalPages - 1 }, (_, i) =>
+          fetch(`https://api.pokemontcg.io/v2/cards?q=set.id:${setId}&orderBy=-cardmarket.prices.averageSellPrice&pageSize=250&page=${i + 2}`, {
             headers: { 'X-Api-Key': POKEMON_KEY }
           }).then(r => r.json())
-        );
-      }
+        )
+      );
+      remaining.forEach(d => { if (d.data) allCards = allCards.concat(d.data); });
+    }
 
-      const results = await Promise.all(pagePromises);
-      const progress = document.getElementById('pokemon-load-progress');
-      if (progress) progress.remove();
-
-      results.forEach((d, pi) => {
-        if (d.data) {
-          d.data.forEach((card, i) => {
-            listEl.insertAdjacentHTML('beforeend', buildCardHTML(card, (pi + 1) * 50 + i));
-          });
-        }
-      });
+    if (allCards.length > 0) {
+      listEl.innerHTML = `<div style="color:var(--muted);font-size:0.75rem;margin-bottom:0.75rem;">${allCards.length} of ${totalCount} cards</div>` +
+        allCards.map((card, i) => buildCardHTML(card, i)).join('');
+    } else {
+      listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">No cards found.</div>';
     }
   } catch(e) {
     listEl.innerHTML = '<div style="color:var(--muted);font-size:0.875rem;">Could not load cards.</div>';
@@ -1204,9 +1240,13 @@ function loadGradingGuide() {
 // ── NEWS SECTION ──
 const NEWSDATA_KEY = 'pub_7f07c6667de74d2d8a8c6a6a01f2e3c3';
 const newsKeywords = {
-  metals: ['gold', 'silver', 'platinum', 'palladium', 'precious metal', 'XAU', 'XAG', 'bullion'],
+  metals: ['gold', 'silver', 'platinum', 'palladium', 'precious metal', 'xau', 'xag', 'bullion'],
   energy: ['oil', 'crude', 'natural gas', 'energy', 'opec', 'petroleum', 'gasoline', 'wti', 'brent'],
-  fed: ['federal reserve', 'fed', 'interest rate', 'inflation', 'cpi', 'ppi', 'gdp', 'powell', 'fomc', 'monetary policy', 'rate hike', 'rate cut'],
+  fed: ['federal reserve', 'fed ', 'interest rate', 'inflation', 'cpi', 'ppi', 'gdp', 'powell', 'fomc', 'monetary policy', 'rate hike', 'rate cut'],
+  aitech: ['artificial intelligence', 'nvidia', 'microsoft', 'openai', 'chatgpt', 'machine learning', 'semiconductor', 'chip', ' ai '],
+  earnings: ['earnings', 'revenue', 'profit', 'quarterly results', 'eps', 'beat estimates', 'missed estimates', 'guidance', 'outlook'],
+  commodities: ['commodity', 'corn', 'wheat', 'soybean', 'copper', 'lumber', 'cotton', 'sugar', 'coffee', 'futures'],
+  global: ['china', 'europe', 'japan', 'emerging markets', 'global economy', 'world bank', 'imf', 'trade war', 'tariff', 'geopolitical'],
 };
 
 let currentNewsTab = 'general';
@@ -1249,7 +1289,7 @@ async function loadNews(tab) {
       articles = await r.json();
 
       // Filter by keywords for specific tabs
-      if (['metals', 'energy', 'fed'].includes(tab)) {
+      if (['metals', 'energy', 'fed', 'aitech', 'earnings', 'commodities', 'global'].includes(tab)) {
         const keywords = newsKeywords[tab];
         articles = articles.filter(a => {
           const text = (a.headline + ' ' + (a.summary || '')).toLowerCase();
@@ -1430,11 +1470,11 @@ strip.addEventListener('touchmove', (e) => {
     <div class="market-pill" id="pill-commodities" onclick="togglePanel('commodities')"><span class="market-icon">🌾</span> Commodities</div>
     <div class="market-pill" id="pill-energy" onclick="togglePanel('energy')"><span class="market-icon">🛢️</span> Energy</div>
     <div class="market-pill" id="pill-forex" onclick="togglePanel('forex')"><span class="market-icon">💱</span> Forex</div>
-    <div class="market-pill coming-soon" onclick="showComingSoon(this, 'AI & Tech')"><span class="market-icon">🤖</span> AI &amp; Tech</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Manufacturing')"><span class="market-icon">🏭</span> Manufacturing</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Retail & Consumer')"><span class="market-icon">🛒</span> Retail &amp; Consumer</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Healthcare')"><span class="market-icon">💊</span> Healthcare</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Gaming')"><span class="market-icon">🎮</span> Gaming</div>
+    <div class="market-pill" id="pill-aitech" onclick="togglePanel('aitech')"><span class="market-icon">🤖</span> AI &amp; Tech</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Travel & Hospitality')"><span class="market-icon">🏨</span> Travel &amp; Hospitality</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Entertainment')"><span class="market-icon">🎵</span> Entertainment</div>
     <div class="market-pill coming-soon" onclick="showComingSoon(this, 'Biotech')"><span class="market-icon">🔬</span> Biotech</div>
@@ -1714,6 +1754,31 @@ strip.addEventListener('touchmove', (e) => {
         <div id="ipo-insights"></div>
       </div>
     </div>
+
+    <!-- AI TECH PANEL -->
+    <div class="crypto-panel" id="panel-aitech">
+      <div class="crypto-panel-header">
+        <div class="crypto-panel-title">🤖 AI & Tech Market</div>
+        <button class="crypto-panel-close" onclick="togglePanel('aitech')">✕</button>
+      </div>
+      <div class="crypto-prices">
+        <div class="crypto-price-card"><div class="crypto-price-label">NVDA</div><div class="crypto-price-value" id="ai-nvda">—</div><div class="crypto-price-change" id="ai-nvda-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Microsoft</div><div class="crypto-price-value" id="ai-msft">—</div><div class="crypto-price-change" id="ai-msft-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Google</div><div class="crypto-price-value" id="ai-googl">—</div><div class="crypto-price-change" id="ai-googl-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Meta</div><div class="crypto-price-value" id="ai-meta">—</div><div class="crypto-price-change" id="ai-meta-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">AMD</div><div class="crypto-price-value" id="ai-amd">—</div><div class="crypto-price-change" id="ai-amd-ch">—</div></div>
+        <div class="crypto-price-card"><div class="crypto-price-label">Apple</div><div class="crypto-price-value" id="ai-aapl">—</div><div class="crypto-price-change" id="ai-aapl-ch">—</div></div>
+      </div>
+      <div class="crypto-insights" style="margin-top:1.25rem;">
+        <div class="panel-section-title">💡 Market Insights</div>
+        <div id="aitech-insights"></div>
+      </div>
+      <div style="margin-top:1.25rem;">
+        <div class="panel-section-title">📰 Latest AI & Tech News</div>
+        <div id="aitech-news"><div style="color:var(--muted);font-size:0.875rem;">Loading...</div></div>
+      </div>
+    </div>
+
     <div class="coming-soon-tooltip" id="coming-soon-panel">
       <h3>🚀 <span id="coming-soon-name"></span> — Coming Soon</h3>
       <p>Full market intelligence for this category is on the way. Join the waitlist to get early access.</p>
@@ -1787,6 +1852,10 @@ strip.addEventListener('touchmove', (e) => {
     <button class="news-tab" onclick="switchNewsTab('energy')" id="news-tab-energy">🛢️ Energy</button>
     <button class="news-tab" onclick="switchNewsTab('fed')" id="news-tab-fed">🏦 Fed & Economy</button>
     <button class="news-tab" onclick="switchNewsTab('housing')" id="news-tab-housing">🏠 Housing</button>
+    <button class="news-tab" onclick="switchNewsTab('aitech')" id="news-tab-aitech">🤖 AI & Tech</button>
+    <button class="news-tab" onclick="switchNewsTab('earnings')" id="news-tab-earnings">💰 Earnings</button>
+    <button class="news-tab" onclick="switchNewsTab('commodities')" id="news-tab-commodities">🌾 Commodities</button>
+    <button class="news-tab" onclick="switchNewsTab('global')" id="news-tab-global">🌍 Global Markets</button>
   </div>
 
   <!-- News Feed -->
