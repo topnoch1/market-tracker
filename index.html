@@ -1973,6 +1973,34 @@ strip.addEventListener('touchmove', (e) => {
   </div>
 </section>
 
+<!-- NEWS SECTION -->
+<section id="news">
+  <div class="section-label">Live News</div>
+  <h2 class="section-heading">Market News,<br /><em>As It Happens.</em></h2>
+  <p class="section-sub">Real time headlines across every market — updated continuously.</p>
+
+  <!-- News Category Tabs -->
+  <div style="display:flex;gap:0.5rem;margin-top:2.5rem;flex-wrap:wrap;">
+    <button class="news-tab active" onclick="switchNewsTab('general')" id="news-tab-general">📈 Stocks & Economy</button>
+    <button class="news-tab" onclick="switchNewsTab('crypto')" id="news-tab-crypto">₿ Crypto</button>
+    <button class="news-tab" onclick="switchNewsTab('forex')" id="news-tab-forex">💱 Forex</button>
+    <button class="news-tab" onclick="switchNewsTab('merger')" id="news-tab-merger">🤝 M&A</button>
+    <button class="news-tab" onclick="switchNewsTab('metals')" id="news-tab-metals">🥇 Metals</button>
+    <button class="news-tab" onclick="switchNewsTab('energy')" id="news-tab-energy">🛢️ Energy</button>
+    <button class="news-tab" onclick="switchNewsTab('fed')" id="news-tab-fed">🏦 Fed & Economy</button>
+    <button class="news-tab" onclick="switchNewsTab('housing')" id="news-tab-housing">🏠 Housing</button>
+    <button class="news-tab" onclick="switchNewsTab('aitech')" id="news-tab-aitech">🤖 AI & Tech</button>
+    <button class="news-tab" onclick="switchNewsTab('earnings')" id="news-tab-earnings">💰 Earnings</button>
+    <button class="news-tab" onclick="switchNewsTab('commodities')" id="news-tab-commodities">🌾 Commodities</button>
+    <button class="news-tab" onclick="switchNewsTab('global')" id="news-tab-global">🌍 Global Markets</button>
+  </div>
+
+  <!-- News Feed -->
+  <div id="news-feed" style="margin-top:1.5rem;">
+    <div style="color:var(--muted);font-size:0.875rem;">Loading news...</div>
+  </div>
+</section>
+
 <!-- PRICING -->
 <section id="pricing">
   <div style="text-align:center;">
@@ -2019,34 +2047,6 @@ strip.addEventListener('touchmove', (e) => {
       </ul>
       <a href="#waitlist" class="btn-secondary" style="display:block;text-align:center;">Contact Us</a>
     </div>
-  </div>
-</section>
-
-<!-- NEWS SECTION -->
-<section id="news">
-  <div class="section-label">Live News</div>
-  <h2 class="section-heading">Market News,<br /><em>As It Happens.</em></h2>
-  <p class="section-sub">Real time headlines across every market — updated continuously.</p>
-
-  <!-- News Category Tabs -->
-  <div style="display:flex;gap:0.5rem;margin-top:2.5rem;flex-wrap:wrap;">
-    <button class="news-tab active" onclick="switchNewsTab('general')" id="news-tab-general">📈 Stocks & Economy</button>
-    <button class="news-tab" onclick="switchNewsTab('crypto')" id="news-tab-crypto">₿ Crypto</button>
-    <button class="news-tab" onclick="switchNewsTab('forex')" id="news-tab-forex">💱 Forex</button>
-    <button class="news-tab" onclick="switchNewsTab('merger')" id="news-tab-merger">🤝 M&A</button>
-    <button class="news-tab" onclick="switchNewsTab('metals')" id="news-tab-metals">🥇 Metals</button>
-    <button class="news-tab" onclick="switchNewsTab('energy')" id="news-tab-energy">🛢️ Energy</button>
-    <button class="news-tab" onclick="switchNewsTab('fed')" id="news-tab-fed">🏦 Fed & Economy</button>
-    <button class="news-tab" onclick="switchNewsTab('housing')" id="news-tab-housing">🏠 Housing</button>
-    <button class="news-tab" onclick="switchNewsTab('aitech')" id="news-tab-aitech">🤖 AI & Tech</button>
-    <button class="news-tab" onclick="switchNewsTab('earnings')" id="news-tab-earnings">💰 Earnings</button>
-    <button class="news-tab" onclick="switchNewsTab('commodities')" id="news-tab-commodities">🌾 Commodities</button>
-    <button class="news-tab" onclick="switchNewsTab('global')" id="news-tab-global">🌍 Global Markets</button>
-  </div>
-
-  <!-- News Feed -->
-  <div id="news-feed" style="margin-top:1.5rem;">
-    <div style="color:var(--muted);font-size:0.875rem;">Loading news...</div>
   </div>
 </section>
 
