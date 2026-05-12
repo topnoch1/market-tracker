@@ -813,22 +813,25 @@ async function autocomplete(input, dropdownId, setId) {
   clearTimeout(autocompleteTimer);
   autocompleteTimer = setTimeout(async () => {
     try {
-      let url = `https://api.pokemontcg.io/v2/cards?q=name:"${query}*"&pageSize=8&orderBy=-cardmarket.prices.averageSellPrice`;
-      if (setId) url += ` set.id:${setId}`;
+      let q = `name:${query}*`;
+      if (setId) q += ` set.id:${setId}`;
 
-      const r = await fetch(url, { headers: { 'X-Api-Key': POKEMON_KEY } });
+      const r = await fetch(`https://api.pokemontcg.io/v2/cards?q=${encodeURIComponent(q)}&pageSize=8&orderBy=-cardmarket.prices.averageSellPrice`, {
+        headers: { 'X-Api-Key': POKEMON_KEY }
+      });
       const d = await r.json();
 
       if (d.data && d.data.length > 0) {
         dropdown.style.display = 'block';
-        dropdown.innerHTML = d.data.map((card, i) => {
+        dropdown.innerHTML = d.data.map((card) => {
           const price = card.tcgplayer?.prices?.holofoil?.market ||
                         card.tcgplayer?.prices?.normal?.market ||
                         card.cardmarket?.prices?.averageSellPrice || null;
           const priceStr = price ? ` — $${parseFloat(price).toFixed(2)}` : '';
           const img = card.images?.small || '';
           const set = card.set?.name || '';
-          return `<div class="autocomplete-item" onclick="selectAutocomplete('${input.id}', '${dropdownId}', '${card.name.replace(/'/g,"\\'")} ${card.number}')">
+          const safeValue = `${card.name} ${card.number}`.replace(/'/g, "\\'");
+          return `<div class="autocomplete-item" onclick="selectAutocomplete('${input.id}', '${dropdownId}', '${safeValue}')">
             ${img ? `<img src="${img}" />` : ''}
             <div>
               <div style="font-weight:600;">${card.name} <span style="color:var(--muted);font-size:0.75rem;">#${card.number}</span>${priceStr}</div>
@@ -840,9 +843,10 @@ async function autocomplete(input, dropdownId, setId) {
         dropdown.style.display = 'none';
       }
     } catch(e) {
+      console.error('Autocomplete error:', e);
       dropdown.style.display = 'none';
     }
-  }, 300);
+  }, 350);
 }
 
 function selectAutocomplete(inputId, dropdownId, value) {
